@@ -3,16 +3,41 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "main": "electron/main.cjs",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "electron:preview": "npm run build && electron .",
+    "electron:build": "npm run build && electron-builder --linux",
+    "electron:build:win": "npm run build && electron-builder --win",
+    "electron:build:all": "npm run build && electron-builder --linux --win"
   },
   "devDependencies": {
+    "electron": "^41.1.0",
+    "electron-builder": "^25.1.8",
     "typescript": "~5.9.3",
     "vite": "^8.0.1"
   },
   "dependencies": {
     "phaser": "^3.90.0"
+  },
+  "build": {
+    "appId": "com.myvalley.game",
+    "productName": "My Valley",
+    "files": [
+      "dist/**/*",
+      "electron/main.cjs"
+    ],
+    "linux": {
+      "target": ["AppImage", "deb"],
+      "category": "Game"
+    },
+    "win": {
+      "target": ["nsis", "portable"]
+    },
+    "directories": {
+      "output": "release"
+    }
   }
 }
