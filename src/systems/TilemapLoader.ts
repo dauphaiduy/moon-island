@@ -27,7 +27,7 @@ export class TilemapLoader {
 
   static preload(scene: Phaser.Scene): void {
     scene.load.tilemapTiledJSON(MapKey.World, 'assets/maps/world.json');
-    scene.load.image(TextureKey.Tiles, 'assets/tilesets/farm_tiles.png');
+    scene.load.image(TextureKey.Tiles, 'assets/tilesets/farm_tiles1.png');
   }
 
   create(): void {
