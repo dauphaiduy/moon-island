@@ -9,7 +9,7 @@ import type { Direction } from '../types';
 const ANIM_CONFIG: Record<Direction, { row: number; frames: number }> = {
   down:  { row: 0, frames: 4 },
   left:  { row: 1, frames: 4 },
-  right: { row: 2, frames: 4 },
+  right: { row: 0, frames: 4 },
   up:    { row: 3, frames: 4 },
 };
 

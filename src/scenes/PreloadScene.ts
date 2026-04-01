@@ -14,10 +14,16 @@ export class PreloadScene extends Phaser.Scene {
     // ── Player spritesheet ─────────────────────────────────────────────────
     // player.png: 128×128 px, 4 cols × 4 rows, each frame 32×32
     // row 0=down  row 1=left  row 2=right  row 3=up
-    this.load.spritesheet(TextureKey.Player, 'assets/player.png', {
+    this.load.spritesheet(TextureKey.Player, 'assets/sprite_128x128.png', {
       frameWidth:  32,
       frameHeight: 32,
     });
+
+    this.load.spritesheet(TextureKey.NPC, 'assets/player.png', {
+      frameWidth:  32,
+      frameHeight: 32,
+    });
+
 
     // ── Loading bar ────────────────────────────────────────────────────────
     const { width, height } = this.scale;

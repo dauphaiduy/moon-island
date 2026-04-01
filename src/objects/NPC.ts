@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { TILE_SIZE } from '../constants';
+import { TextureKey, TILE_SIZE } from '../constants';
 import type { NpcDef } from '../types/npc';
 
 const WANDER_INTERVAL_MS = 3000;
@@ -10,7 +10,7 @@ const INTERACT_DIST      = TILE_SIZE * 1.8;
 export class NPC extends Phaser.GameObjects.Container {
   readonly def: NpcDef;
 
-  private sprite!:     Phaser.GameObjects.Rectangle;
+  private sprite!: Phaser.GameObjects.Sprite;
   private nameLabel!:  Phaser.GameObjects.Text;
   private bubble!:     Phaser.GameObjects.Text; // "!" or "🛒"
   private wanderTimer: Phaser.Time.TimerEvent | null = null;
@@ -43,8 +43,10 @@ export class NPC extends Phaser.GameObjects.Container {
 
   private buildVisuals(scene: Phaser.Scene): void {
     // Body placeholder (swap with sprite when you have NPC spritesheet)
-    this.sprite = scene.add.rectangle(0, 0, TILE_SIZE - 4, TILE_SIZE - 4, this.def.color)
-      .setStrokeStyle(1, 0x000000, 0.4);
+    // this.sprite = scene.add.rectangle(0, 0, TILE_SIZE - 4, TILE_SIZE - 4, this.def.color)
+    //   .setStrokeStyle(1, 0x000000, 0.4);
+
+    this.sprite = scene.add.sprite(0, 0, TextureKey.NPC, 0);
     this.add(this.sprite);
 
     // Name label above head

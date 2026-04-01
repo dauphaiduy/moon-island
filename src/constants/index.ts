@@ -27,6 +27,7 @@ type SceneKey = typeof SceneKey[keyof typeof SceneKey];
 export const TextureKey = {
   Tiles:  'tiles',
   Player: 'player',
+  NPC:    'npc',
 } as const;
 
 export const MapKey = {
