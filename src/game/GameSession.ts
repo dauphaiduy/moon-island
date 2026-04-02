@@ -16,6 +16,7 @@ export class GameSession {
   private readonly handleSkipHourKey = () => this.advanceHour();
   private readonly handleSaveKey = () => { void this.saveGame(); };
   private readonly handleEscKey  = () => this.togglePauseMenu();
+  private readonly handleInvKey  = () => this.toggleInventory();
   private readonly shopKeyHandlers = [0, 1, 2].map((index) => () => this.buyShopItem(index));
   private runtime!: GameRuntime;
   private ui!: UIScene;
@@ -42,6 +43,7 @@ export class GameSession {
       keyboard.off('keydown-N',   this.handleSkipHourKey);
       keyboard.off('keydown-F5',  this.handleSaveKey);
       keyboard.off('keydown-ESC', this.handleEscKey);
+      keyboard.off('keydown-I',   this.handleInvKey);
 
       this.shopKeyHandlers.forEach((handler, index) => {
         keyboard.off(`keydown-${index + 1}`, handler);
@@ -127,6 +129,7 @@ export class GameSession {
     keyboard.on('keydown-N',   this.handleSkipHourKey);
     keyboard.on('keydown-F5',  this.handleSaveKey);
     keyboard.on('keydown-ESC', this.handleEscKey);
+    keyboard.on('keydown-I',   this.handleInvKey);
 
     this.shopKeyHandlers.forEach((handler, index) => {
       keyboard.on(`keydown-${index + 1}`, handler);
@@ -268,7 +271,15 @@ export class GameSession {
   private togglePauseMenu(): void {
     // Block ESC while dialog is open
     if (this.dialog?.isOpen) return;
+    // ESC also closes inventory if open
+    if (this.ui.isInventoryOpen) { this.ui.closeInventoryPanel(); return; }
     this.ui.togglePauseMenu();
+  }
+
+  private toggleInventory(): void {
+    if (this.dialog?.isOpen) return;
+    if (this.ui.isPauseMenuOpen) return;
+    this.ui.toggleInventoryPanel(this.runtime.inventory);
   }
 
   private loadSave(): void {

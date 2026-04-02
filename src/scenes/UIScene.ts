@@ -8,6 +8,10 @@ const SLOT_GAP    = 6;
 const HOTBAR_COLS = 8;
 const HOTBAR_W    = HOTBAR_COLS * (SLOT_SIZE + SLOT_GAP) - SLOT_GAP;
 
+// Full inventory grid
+const INV_COLS = 8;
+const INV_ROWS = 3;  // 24 slots total
+
 const TIME_LABELS: Record<TimeOfDay, string> = {
   dawn:      '🌅 Bình minh',
   morning:   '☀️ Sáng',
@@ -37,6 +41,15 @@ export class UIScene extends Phaser.Scene {
   private confirmContainer!: Phaser.GameObjects.Container;
   private isPauseOpen = false;
   onPauseAction?: (action: PauseMenuAction) => void;
+
+  // ── Inventory panel ──────────────────────────────────────────────
+  private invContainer!:  Phaser.GameObjects.Container;
+  private invSlotBgs:     Phaser.GameObjects.Rectangle[] = [];
+  private invSlotEmojis:  Phaser.GameObjects.Text[]      = [];
+  private invSlotQtys:    Phaser.GameObjects.Text[]      = [];
+  private invSlotNames:   Phaser.GameObjects.Text[]      = [];
+  private invGoldText!:   Phaser.GameObjects.Text;
+  private isInvOpen = false;
 
   constructor() {
     super({ key: SceneKey.UI });
@@ -94,12 +107,15 @@ export class UIScene extends Phaser.Scene {
     this.buildHotbar(hotbarX, hotbarY);
 
     // ── Hint ─────────────────────────────────────────────────────────────────
-    this.add.text(W / 2, H - 4, 'Tab: công cụ  |  E: tương tác  |  Q: bán tất cả  |  ESC: menu', {
+    this.add.text(W / 2, H - 4, 'Tab: công cụ  |  E: tương tác  |  I: túI đồ  |  Q: bán tất cả  |  ESC: menu', {
       fontSize: '10px', color: '#ffffff55',
     }).setOrigin(0.5, 1);
 
     // ── Pause menu (hidden by default) ───────────────────────────────────────
     this.buildPauseMenu(W, H);
+
+    // ── Inventory panel (hidden by default) ──────────────────────────────
+    this.buildInventoryPanel(W, H);
   }
 
   // ─── Hotbar ──────────────────────────────────────────────────────────────────
@@ -183,6 +199,56 @@ export class UIScene extends Phaser.Scene {
 
   get isPauseMenuOpen(): boolean {
     return this.isPauseOpen;
+  }
+
+  get isInventoryOpen(): boolean {
+    return this.isInvOpen;
+  }
+
+  toggleInventoryPanel(inventory: InventorySystem): void {
+    if (this.isInvOpen) {
+      this.closeInventoryPanel();
+    } else {
+      this.refreshInventoryPanel(inventory);
+      this.openInventoryPanel();
+    }
+  }
+
+  private openInventoryPanel(): void {
+    if (this.isInvOpen) return;
+    this.isInvOpen = true;
+    this.invContainer.setVisible(true).setAlpha(0);
+    this.tweens.add({ targets: this.invContainer, alpha: 1, duration: 180 });
+  }
+
+  closeInventoryPanel(): void {
+    if (!this.isInvOpen) return;
+    this.isInvOpen = false;
+    this.tweens.add({
+      targets: this.invContainer,
+      alpha: 0,
+      duration: 150,
+      onComplete: () => this.invContainer.setVisible(false),
+    });
+  }
+
+  refreshInventoryPanel(inventory: InventorySystem): void {
+    const slots = inventory.getAllSlots();
+    for (let i = 0; i < slots.length; i++) {
+      const slot = slots[i];
+      if (slot) {
+        this.invSlotEmojis[i].setText(slot.item.emoji);
+        this.invSlotQtys[i].setText(slot.qty > 1 ? `x${slot.qty}` : '');
+        this.invSlotNames[i].setText(slot.item.name);
+        this.invSlotBgs[i].setFillStyle(0x1a3a1a, 0.85).setStrokeStyle(1.5, 0x4a9a3a, 0.8);
+      } else {
+        this.invSlotEmojis[i].setText('');
+        this.invSlotQtys[i].setText('');
+        this.invSlotNames[i].setText('');
+        this.invSlotBgs[i].setFillStyle(0x0a1a0a, 0.7).setStrokeStyle(1, 0x334433, 0.5);
+      }
+    }
+    this.invGoldText.setText(`💰 ${inventory.gold.toLocaleString()} G`);
   }
 
   togglePauseMenu(): void {
@@ -275,6 +341,74 @@ export class UIScene extends Phaser.Scene {
 
     // Build the confirm dialog (hidden by default, depth above pause menu)
     this.buildConfirmDialog(W, H);
+  }
+
+  private buildInventoryPanel(W: number, H: number): void {
+    const TOTAL = INV_COLS * INV_ROWS;
+    const GRID_W = INV_COLS * (SLOT_SIZE + SLOT_GAP) - SLOT_GAP;
+    const GRID_H = INV_ROWS * (SLOT_SIZE + SLOT_GAP) - SLOT_GAP;
+    const BOX_PAD = 20;
+    const BOX_W = GRID_W + BOX_PAD * 2;
+    const BOX_H = GRID_H + 90;  // room for title + gold
+    const CX = W / 2;
+    const CY = H / 2;
+
+    const overlay = this.add.rectangle(0, 0, W, H, 0x000000, 0.5).setOrigin(0);
+    const box = this.add.rectangle(CX, CY, BOX_W, BOX_H, 0x0d1f0d, 0.96)
+      .setStrokeStyle(2, 0x4a9a3a, 1);
+
+    const title = this.add.text(CX, CY - BOX_H / 2 + 18, '🎒 TúI ĐỒ', {
+      fontSize: '16px', color: '#ffe066', fontStyle: 'bold',
+      stroke: '#000000', strokeThickness: 3,
+    }).setOrigin(0.5);
+
+    const hint = this.add.text(CX, CY + BOX_H / 2 - 12, 'I / ESC: đóng', {
+      fontSize: '10px', color: '#ffffff44',
+    }).setOrigin(0.5);
+
+    this.invGoldText = this.add.text(CX, CY + BOX_H / 2 - 30, '💰 0 G', {
+      fontSize: '13px', color: '#ffe066',
+      stroke: '#000000', strokeThickness: 2,
+    }).setOrigin(0.5);
+
+    const gridObjs: Phaser.GameObjects.GameObject[] = [];
+    const originX = CX - GRID_W / 2;
+    const originY = CY - GRID_H / 2 - 4;
+
+    for (let i = 0; i < TOTAL; i++) {
+      const col = i % INV_COLS;
+      const row = Math.floor(i / INV_COLS);
+      const sx = originX + col * (SLOT_SIZE + SLOT_GAP);
+      const sy = originY + row * (SLOT_SIZE + SLOT_GAP);
+
+      const bg = this.add.rectangle(sx, sy, SLOT_SIZE, SLOT_SIZE, 0x0a1a0a, 0.7)
+        .setOrigin(0).setStrokeStyle(1, 0x334433, 0.5);
+      this.invSlotBgs.push(bg);
+
+      const emoji = this.add.text(sx + SLOT_SIZE / 2, sy + SLOT_SIZE / 2 - 4, '', {
+        fontSize: '20px',
+      }).setOrigin(0.5);
+      this.invSlotEmojis.push(emoji);
+
+      const qty = this.add.text(sx + SLOT_SIZE - 3, sy + SLOT_SIZE - 3, '', {
+        fontSize: '10px', color: '#ffffff',
+        stroke: '#000000', strokeThickness: 2,
+      }).setOrigin(1, 1);
+      this.invSlotQtys.push(qty);
+
+      const name = this.add.text(sx + SLOT_SIZE / 2, sy + SLOT_SIZE - 9, '', {
+        fontSize: '8px', color: '#ccffcc',
+      }).setOrigin(0.5, 0);
+      this.invSlotNames.push(name);
+
+      gridObjs.push(bg, emoji, qty, name);
+    }
+
+    this.invContainer = this.add.container(0, 0, [
+      overlay, box, title, hint, this.invGoldText, ...gridObjs,
+    ]);
+    this.invContainer.setVisible(false);
+    this.invContainer.setDepth(90);  // below pause menu (100) but above game
   }
 
   private buildConfirmDialog(W: number, H: number): void {
