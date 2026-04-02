@@ -60,6 +60,12 @@ export class GameSession {
     const nearby = this.findNearbyNpc();
     if (nearby) nearby.highlightBubble(this.scene);
 
+    if (this.runtime.boat.isNearPlayer(px, py)) {
+      this.runtime.boat.highlightBubble(this.scene);
+    } else {
+      this.runtime.boat.hideBubble();
+    }
+
     if (this.runtime.player.interactJustPressed) {
       this.handleInteract();
     }
