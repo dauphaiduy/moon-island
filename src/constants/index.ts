@@ -1,7 +1,7 @@
 export const TILE_SIZE = 32;
 
-export const MAP_WIDTH = 30;   // tiles
-export const MAP_HEIGHT = 20;  // tiles
+export const MAP_WIDTH = 29;   // tiles
+export const MAP_HEIGHT = 16;  // tiles
 
 export const PLAYER_SPEED = 170;
 

@@ -3,19 +3,39 @@ import { TILE_SIZE, MAP_WIDTH, MAP_HEIGHT, TextureKey, MapKey } from '../constan
 
 export type ZoneType = 'grass' | 'farm' | 'water' | 'path' | 'none';
 
-const TILE_ID = {
-  EMPTY:    0,
-  GRASS:    1,
-  FARMLAND: 2,
-  TREE:     5,
-  PATH:     4,
-  WATER:    9,
-  WALL:     6,
-} as const;
+// Describes how each map layer participates in collision and zone detection.
+// - collides: true  → ALL non-empty tiles in this layer block movement
+//                     (use setCollision(true) — the "collider" flag is a layer property, not per-tile)
+// - zone           → non-blocking layers contribute this zone type to the ground grid
+//
+// Source: each layer's "collider" property in map.json, adjusted for gameplay intent:
+//   Cliff / Rocks              → hard walls, block all directions
+//   Buildings                  → solid structures, block all directions
+//   Bridge (vertical/horizontal) → walkable surface — collision OFF so player can cross
+//   Stairs                     → passage through cliff — collision OFF so player can climb
+//   Everything else            → ground / visual decoration, fully walkable
+const LAYER_CONFIG: Array<{ name: string; collides: boolean; zone?: ZoneType }> = [
+  { name: 'Background',          collides: false},
+  { name: 'Sand',                collides: false, zone: 'grass'  },
+  { name: 'Cliff',               collides: true               },
+  { name: 'Rocks',               collides: false               },
+  { name: 'Grass',               collides: false, zone: 'farm' },
+  { name: 'Bridge - vertical',   collides: false, zone: 'path'  },
+  { name: 'Bridge - horizontal', collides: false, zone: 'path'  },
+  { name: 'Stairs',              collides: false, zone: 'grass'  },
+  { name: 'Shadows',             collides: false               },
+  { name: 'Buildings',           collides: true               },
+  { name: 'Trees front',         collides: false               },
+  { name: 'Miscs',               collides: false               },
+  { name: 'water',               collides: true, zone: 'water'  },
+];
 
 export class TilemapLoader {
   private map: Phaser.Tilemaps.Tilemap | null = null;
-  private layerCollision: Phaser.Tilemaps.TilemapLayer | null = null;
+  /** Layers that block movement — used for physics colliders. */
+  private collideLayers: Phaser.Tilemaps.TilemapLayer[] = [];
+  /** All created layers keyed by config entry — used for zone grid building. */
+  private namedLayers = new Map<string, Phaser.Tilemaps.TilemapLayer>();
 
   private zoneGrid: ZoneType[][] = [];
 
@@ -26,8 +46,8 @@ export class TilemapLoader {
   }
 
   static preload(scene: Phaser.Scene): void {
-    scene.load.tilemapTiledJSON(MapKey.World, 'assets/maps/world.json');
-    scene.load.image(TextureKey.Tiles, 'assets/tilesets/farm_tiles1.png');
+    scene.load.tilemapTiledJSON(MapKey.World, 'assets/maps/map.json');
+    scene.load.image(TextureKey.Tiles, 'assets/tilesets/spritesheet.png');
   }
 
   create(): void {
@@ -38,8 +58,6 @@ export class TilemapLoader {
   }
 
   private tryCreateFromTiled(): boolean {
-    // make.tilemap() does NOT throw on missing key — it returns a broken object.
-    // Check the cache manually first.
     const cache = this.scene.cache.tilemap;
     if (!cache.exists(MapKey.World)) {
       console.warn(`[TilemapLoader] Key "${MapKey.World}" not in tilemap cache`);
@@ -54,37 +72,41 @@ export class TilemapLoader {
       return false;
     }
 
-    // addTilesetImage returns null when the image key wasn't loaded
-    const tileset = map.addTilesetImage('farm_tiles', TextureKey.Tiles);
+    const tileset = map.addTilesetImage('spritefusion', TextureKey.Tiles);
     if (!tileset) {
       console.warn(`[TilemapLoader] Tileset image "${TextureKey.Tiles}" not in texture cache`);
       return false;
     }
 
-    // createLayer returns null when the layer name doesn't exist in the JSON
-    const ground     = map.createLayer('Ground',     tileset, 0, 0);
-    const decoration = map.createLayer('Decoration', tileset, 0, 0);
-    const collision  = map.createLayer('Collision',  tileset, 0, 0);
+    // Tiles in map.json are 64px; scale to 0.5 so they render at 32px — matching the player.
+    const SCALE = 0.5;
 
-    const missing = [['Ground', ground], ['Decoration', decoration], ['Collision', collision]]
-      .filter(([, l]) => !l)
-      .map(([name]) => name as string);
+    for (const cfg of LAYER_CONFIG) {
+      const layer = map.createLayer(cfg.name, tileset, 0, 0);
+      if (!layer) {
+        console.warn(`[TilemapLoader] Layer "${cfg.name}" not found, skipping`);
+        continue;
+      }
+      layer.setScale(SCALE);
 
-    if (missing.length > 0) {
-      console.warn(`[TilemapLoader] Layer(s) missing in JSON: ${missing.join(', ')}`);
+      if (cfg.collides) {
+        // Block all non-empty tiles in this layer.
+        // The map's "collider" flag is per-layer, not per-tile, so we exclude only empty (index -1).
+        layer.setCollisionByExclusion([-1]);
+        this.collideLayers.push(layer);
+      }
+
+      this.namedLayers.set(cfg.name, layer);
+    }
+
+    if (this.namedLayers.size === 0) {
+      console.warn('[TilemapLoader] No layers created');
       return false;
     }
 
-    // All checks passed — commit
     this.map = map;
-    this.layerCollision = collision!;
-
-    this.layerCollision.setVisible(false);
-    this.layerCollision.setCollisionByExclusion([TILE_ID.EMPTY]);
-
-    this.buildZoneGridFromObjects();
-
-    this.scene.physics.world.setBounds(0, 0, map.widthInPixels, map.heightInPixels);
+    this.buildZoneGridFromLayers();
+    this.scene.physics.world.setBounds(0, 0, map.widthInPixels * SCALE, map.heightInPixels * SCALE);
     return true;
   }
 
@@ -92,41 +114,46 @@ export class TilemapLoader {
     object: Phaser.GameObjects.GameObject,
     callback?: Phaser.Types.Physics.Arcade.ArcadePhysicsCallback,
   ): void {
-    if (!this.layerCollision) return;
-    this.scene.physics.add.collider(object, this.layerCollision, callback);
+    for (const layer of this.collideLayers) {
+      this.scene.physics.add.collider(object, layer, callback);
+    }
   }
 
   getZone(tileX: number, tileY: number): ZoneType {
     return this.zoneGrid[tileY]?.[tileX] ?? 'none';
   }
 
-  get widthInPixels(): number  { return this.map?.widthInPixels  ?? MAP_WIDTH  * TILE_SIZE; }
-  get heightInPixels(): number { return this.map?.heightInPixels ?? MAP_HEIGHT * TILE_SIZE; }
+  get widthInPixels(): number  { return (this.map?.widthInPixels  ?? MAP_WIDTH  * TILE_SIZE * 2) * 0.5; }
+  get heightInPixels(): number { return (this.map?.heightInPixels ?? MAP_HEIGHT * TILE_SIZE * 2) * 0.5; }
 
-  private buildZoneGridFromObjects(): void {
+  private buildZoneGridFromLayers(): void {
     if (!this.map) return;
 
-    for (let ty = 0; ty < MAP_HEIGHT; ty++) {
-      this.zoneGrid[ty] = new Array<ZoneType>(MAP_WIDTH).fill('grass');
+    const mapW = this.map.width;
+    const mapH = this.map.height;
+
+    // Default every tile to 'none'; ground layers will fill in walkable zones.
+    for (let ty = 0; ty < mapH; ty++) {
+      this.zoneGrid[ty] = new Array<ZoneType>(mapW).fill('none');
     }
 
-    const objectLayer = this.map.getObjectLayer('Zone');
-    if (!objectLayer) return;
+    // Walk all layers in order; each tile writes its zone (or 'none' for blocking layers
+    // that have no explicit zone). Later layers override earlier ones.
+    for (const cfg of LAYER_CONFIG) {
+      if (!cfg.zone && !cfg.collides) continue;         // visual-only layer, skip
+      if (!this.namedLayers.has(cfg.name)) continue;
 
-    for (const obj of objectLayer.objects) {
-      const zone = (obj.properties as Array<{ name: string; value: string }> | undefined)
-        ?.find(p => p.name === 'zone')?.value as ZoneType | undefined;
+      // Blocking layers without an explicit zone make tiles impassable ('none').
+      // Blocking layers WITH a zone (e.g. water) keep their zone so game systems
+      // (e.g. fishing) can detect them even though the player cannot walk there.
+      const zoneValue: ZoneType = cfg.zone ?? 'none';
 
-      if (!zone) continue;
-
-      const x0 = Math.floor((obj.x ?? 0) / TILE_SIZE);
-      const y0 = Math.floor((obj.y ?? 0) / TILE_SIZE);
-      const x1 = Math.floor(((obj.x ?? 0) + (obj.width  ?? 0)) / TILE_SIZE);
-      const y1 = Math.floor(((obj.y ?? 0) + (obj.height ?? 0)) / TILE_SIZE);
-
-      for (let ty = y0; ty < y1; ty++) {
-        for (let tx = x0; tx < x1; tx++) {
-          if (this.zoneGrid[ty]) this.zoneGrid[ty][tx] = zone;
+      for (let ty = 0; ty < mapH; ty++) {
+        for (let tx = 0; tx < mapW; tx++) {
+          const tile = this.map.getTileAt(tx, ty, false, cfg.name);
+          if (tile && tile.index !== -1) {
+            this.zoneGrid[ty][tx] = zoneValue;
+          }
         }
       }
     }

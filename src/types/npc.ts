@@ -21,6 +21,12 @@ export interface QuestDef {
 
 export type NpcState = 'idle' | 'walking' | 'talking';
 
+/** Extra dialog lines unlocked when friendship ≥ minFriendship */
+export interface FriendshipDialog {
+  minFriendship: number;
+  lines:         DialogLine[];
+}
+
 export interface NpcDef {
   id:       string;
   name:     string;
@@ -32,4 +38,6 @@ export interface NpcDef {
   shop?:    ShopItem[];   // nếu có → là merchant
   quest?:   QuestDef;     // nếu có → có nhiệm vụ
   wanders:  boolean;      // có đi lại không
+  /** Dialog tiers unlocked at friendship thresholds (optional) */
+  friendshipDialogs?: FriendshipDialog[];
 }

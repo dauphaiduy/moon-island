@@ -5,8 +5,12 @@ export interface TilePosition {
   tileY: number;
 }
 
+export type CropType = 'wheat' | 'carrot' | 'tomato';
+
 export interface FarmTile extends TilePosition {
-  state: 'empty' | 'tilled' | 'seeded' | 'grown';
+  state: 'tilled' | 'seeded' | 'grown';
+  cropType?: CropType;      // set when a seed is planted
+  watered:   boolean;       // must be watered each day for growth to progress
   growthStage: number;
   growthTimer: number;
 }

@@ -15,11 +15,17 @@ export function bindRuntimeToUI({ scene, runtime, ui }: BindRuntimeToUIParams): 
     ui.setGold(runtime.inventory.gold);
   };
 
+  const _existingTimeChange = runtime.dayNight.onTimeChange;
   runtime.dayNight.onTimeChange = (state) => {
+    _existingTimeChange?.(state);
     runtime.overlay.setFillStyle(state.tint, state.alpha);
     ui.setClock(state);
   };
-  runtime.dayNight.onNewDay = (day) => ui.notify(`🌅 Ngày ${day} bắt đầu!`);
+  const _existingNewDay = runtime.dayNight.onNewDay;
+  runtime.dayNight.onNewDay = (day) => {
+    _existingNewDay?.(day);
+    ui.notify(`🌅 Ngày ${day} bắt đầu!`);
+  };
 
   runtime.fishing.onCatch = (fish) => {
     const added = runtime.inventory.addFish(fish);
@@ -39,8 +45,8 @@ export function bindRuntimeToUI({ scene, runtime, ui }: BindRuntimeToUIParams): 
 
   scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
     runtime.inventory.onChange = undefined;
-    runtime.dayNight.onTimeChange = undefined;
-    runtime.dayNight.onNewDay = undefined;
+    runtime.dayNight.onTimeChange = _existingTimeChange;
+    runtime.dayNight.onNewDay = _existingNewDay;
     runtime.fishing.onCatch = undefined;
     runtime.fishing.onMiss = undefined;
   });

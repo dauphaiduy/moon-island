@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import type { NpcDef } from '../types/npc';
+import type { NPC } from '../objects/NPC';
 import type { InventorySystem } from './InventorySystem';
 import { ITEMS } from './InventorySystem';
 
@@ -11,7 +11,7 @@ export class DialogSystem {
 
   // State
   private mode:         DialogMode = 'closed';
-  private currentNpc:   NpcDef | null = null;
+  private currentNpc:   NPC | null = null;
   private dialogIndex   = 0;
   private completedQuests = new Set<string>();
 
@@ -68,17 +68,18 @@ export class DialogSystem {
 
   // ─── Open / close ────────────────────────────────────────────────────────────
 
-  open(npc: NpcDef): void {
+  open(npc: NPC): void {
     this.currentNpc  = npc;
     this.dialogIndex = 0;
     this.clearShopItems();
+    npc.tryDailyChat();
 
     // Decide mode
-    if (npc.quest && !this.completedQuests.has(npc.quest.id)) {
-      const q    = npc.quest;
+    if (npc.def.quest && !this.completedQuests.has(npc.def.quest.id)) {
+      const q    = npc.def.quest;
       const have = this.inventory.count(q.goal.itemId);
       this.mode  = have >= q.goal.qty ? 'quest_complete' : 'quest';
-    } else if (npc.shop) {
+    } else if (npc.def.shop) {
       this.mode = 'shop';
     } else {
       this.mode = 'dialog';
@@ -105,7 +106,7 @@ export class DialogSystem {
 
     switch (this.mode) {
       case 'dialog':
-        this.dialogIndex = (this.dialogIndex + 1) % this.currentNpc.dialog.length;
+        this.dialogIndex = (this.dialogIndex + 1) % this.currentNpc.activeDialog.length;
         if (this.dialogIndex === 0) { this.close(); return; }
         break;
 
@@ -115,9 +116,10 @@ export class DialogSystem {
         break;
 
       case 'quest_complete': {
-        const q = this.currentNpc.quest!;
+        const q = this.currentNpc.def.quest!;
         this.inventory.removeByIdAndQty(q.goal.itemId, q.goal.qty);
         this.onGoldSpend?.(-q.reward.gold); // negative = earn
+        this.currentNpc.gainFriendship(3);
         this.completedQuests.add(q.id);
         this.mode = 'dialog';
         this.bodyText.setText(q.reward.dialog);
@@ -136,8 +138,8 @@ export class DialogSystem {
 
   /** Buy item at shop slot index (0-based). Returns true if success. */
   buyShopItem(index: number): boolean {
-    if (this.mode !== 'shop' || !this.currentNpc?.shop) return false;
-    const item = this.currentNpc.shop[index];
+    if (this.mode !== 'shop' || !this.currentNpc?.def.shop) return false;
+    const item = this.currentNpc.def.shop[index];
     if (!item) return false;
 
     const canBuy = (this.inventory.gold ?? 0) >= item.price;  // gold checked externally via onGoldSpend
@@ -153,17 +155,17 @@ export class DialogSystem {
 
   private render(): void {
     const npc = this.currentNpc!;
-    this.nameText.setText(`${npc.emoji}  ${npc.name}`);
+    this.nameText.setText(`${npc.def.emoji}  ${npc.def.name}`);
     this.clearShopItems();
 
     switch (this.mode) {
       case 'dialog':
-        this.bodyText.setText(npc.dialog[this.dialogIndex].text);
+        this.bodyText.setText(npc.activeDialog[this.dialogIndex].text);
         this.hintText.setText('[E] Tiếp tục');
         break;
 
       case 'quest': {
-        const q = npc.quest!;
+        const q = npc.def.quest!;
         const have = this.inventory.count(q.goal.itemId);
         const def  = ITEMS[q.goal.itemId];
         this.bodyText.setText(
@@ -175,7 +177,7 @@ export class DialogSystem {
       }
 
       case 'quest_complete': {
-        const q   = npc.quest!;
+        const q   = npc.def.quest!;
         const def = ITEMS[q.goal.itemId];
         this.bodyText.setText(
           `✅ Đã đủ ${q.goal.qty} ${def.emoji}${def.name}!\n` +
@@ -186,7 +188,7 @@ export class DialogSystem {
       }
 
       case 'shop': {
-        const shop = npc.shop!;
+        const shop = npc.def.shop!;
         this.bodyText.setText('');
         const PY = this.scene.scale.height - 130 - 60;
         shop.forEach((item, i) => {

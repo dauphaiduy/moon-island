@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { SceneKey } from '../constants';
 import type { UIScene } from '../scenes/UIScene';
 import { ITEMS } from '../systems/InventorySystem';
+import type { ItemId } from '../types';
 import { bindRuntimeToUI } from './bindRuntimeToUI';
 import { createGameRuntime, type GameRuntime } from './createGameRuntime';
 import { TOOL_LABELS, TOOL_ORDER, type ToolId } from './gameTools';
@@ -49,6 +50,12 @@ export class GameSession {
     this.runtime.player.update();
     this.runtime.farming.update(delta);
     this.runtime.dayNight.update(delta);
+
+    const px = this.runtime.player.x;
+    const py = this.runtime.player.y;
+    for (const npc of this.runtime.npcs) {
+      npc.update(px, py);
+    }
 
     const nearby = this.findNearbyNpc();
     if (nearby) nearby.highlightBubble(this.scene);
@@ -137,7 +144,7 @@ export class GameSession {
 
     const nearby = this.findNearbyNpc();
     if (nearby) {
-      this.dialog?.open(nearby.def);
+      this.dialog?.open(nearby);
       return;
     }
 
@@ -145,31 +152,58 @@ export class GameSession {
     const zone = this.runtime.tilemap.getZone(tileX, tileY);
 
     switch (this.currentTool) {
-      case 'hoe':
-        if (zone === 'farm' && this.runtime.farming.till(tileX, tileY)) {
+      case 'hoe': {
+        if (zone !== 'farm') break;
+        // Harvest fully grown crops first
+        const harvested = this.runtime.farming.harvest(tileX, tileY);
+        if (harvested) {
+          if (this.runtime.inventory.isFull()) {
+            this.ui.notify('⚠️ Túi đồ đầy!', '#e67e22');
+            break;
+          }
+          this.runtime.inventory.add(harvested, 1);
+          this.ui.notify(`✅ Thu hoạch ${ITEMS[harvested].emoji} ${ITEMS[harvested].name}!`);
+          break;
+        }
+        // Otherwise till the soil
+        if (this.runtime.farming.till(tileX, tileY)) {
           this.ui.notify('🌱 Đã cày đất');
         }
         break;
+      }
 
-      case 'wateringCan':
+      case 'wateringCan': {
         if (zone !== 'farm') break;
+        const tile = this.runtime.farming.getTile(tileX, tileY);
+        if (!tile) break;
 
-        if (this.runtime.farming.plant(tileX, tileY)) {
-          this.ui.notify('🌾 Đã gieo hạt');
+        // On tilled soil: auto-plant first available seed (also waters automatically)
+        if (tile.state === 'tilled') {
+          const seedIds: ItemId[] = ['seed_wheat', 'seed_carrot', 'seed_tomato'];
+          const seed = seedIds.find(id => this.runtime.inventory.count(id) > 0);
+          if (seed) {
+            const cropId = this.runtime.farming.plantSeed(tileX, tileY, seed);
+            if (cropId) {
+              this.runtime.inventory.removeByIdAndQty(seed, 1);
+              this.ui.notify(`🌾 Đã gieo ${ITEMS[seed].emoji} ${ITEMS[seed].name}`);
+              break;
+            }
+          }
+          // No seeds — just water the soil
+          if (this.runtime.farming.water(tileX, tileY)) {
+            this.ui.notify('💧 Đã tưới đất');
+          }
           break;
         }
 
-        if (!this.runtime.farming.harvest(tileX, tileY)) break;
-
-        if (this.runtime.inventory.isFull()) {
-          this.ui.notify('⚠️ Túi đồ đầy!', '#e67e22');
-          break;
+        // On seeded soil: water to continue growth
+        if (this.runtime.farming.water(tileX, tileY)) {
+          this.ui.notify('💧 Đã tưới cây');
+        } else if (tile.watered) {
+          this.ui.notify('💧 Đã tưới rồi hôm nay');
         }
-
-        const cropId = this.runtime.inventory.addHarvest();
-        const cropDef = ITEMS[cropId];
-        this.ui.notify(`✅ Thu hoạch ${cropDef.emoji} ${cropDef.name}!`);
         break;
+      }
 
       case 'fishingRod':
         if (!this.runtime.fishing.isActive && zone === 'water') {

@@ -30,12 +30,26 @@ export function createGameRuntime(scene: Phaser.Scene): GameRuntime {
   const inventory = new InventorySystem();
   const dayNight = new DayNightSystem();
 
+  // Give the player a handful of starter seeds
+  inventory.add('seed_wheat',  5);
+  inventory.add('seed_carrot', 3);
+  inventory.add('seed_tomato', 2);
+
   const npcs = NPC_DEFS.map((def) => {
     const npc = new NPC(scene, def);
     tilemap.addCollider(npc);
     scene.physics.add.collider(player, npc);
     return npc;
   });
+
+  // Reset crop watering + NPC daily state at the start of each new in-game day
+  dayNight.onNewDay = (_day) => {
+    farming.onNewDay();
+    for (const npc of npcs) npc.onNewDay();
+  };
+  dayNight.onTimeChange = (state) => {
+    for (const npc of npcs) npc.onTimeChange(state.timeOfDay);
+  };
 
   const overlay = scene.add.rectangle(
     0,
