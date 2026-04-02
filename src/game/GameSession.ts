@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { SceneKey } from '../constants';
 import type { UIScene } from '../scenes/UIScene';
-import { ITEMS } from '../systems/InventorySystem';
+import { ITEMS } from '../data/items';
 import type { ItemId } from '../types';
 import { bindRuntimeToUI } from './bindRuntimeToUI';
 import { createGameRuntime, type GameRuntime } from './createGameRuntime';
