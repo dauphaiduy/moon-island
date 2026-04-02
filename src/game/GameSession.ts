@@ -7,12 +7,15 @@ import { bindRuntimeToUI } from './bindRuntimeToUI';
 import { createGameRuntime, type GameRuntime } from './createGameRuntime';
 import { TOOL_LABELS, TOOL_ORDER, type ToolId } from './gameTools';
 import type { DialogSystem } from '../systems/DialogSystem';
+import { SaveSystem } from '../systems/SaveSystem';
 
 export class GameSession {
   private readonly scene: Phaser.Scene;
-  private readonly handleTabKey = () => this.cycleTool();
+  private readonly handleTabKey  = () => this.cycleTool();
   private readonly handleSellKey = () => this.sellInventory();
   private readonly handleSkipHourKey = () => this.advanceHour();
+  private readonly handleSaveKey = () => { void this.saveGame(); };
+  private readonly handleEscKey  = () => this.togglePauseMenu();
   private readonly shopKeyHandlers = [0, 1, 2].map((index) => () => this.buyShopItem(index));
   private runtime!: GameRuntime;
   private ui!: UIScene;
@@ -35,8 +38,10 @@ export class GameSession {
     const keyboard = this.scene.input.keyboard;
     if (keyboard) {
       keyboard.off('keydown-TAB', this.handleTabKey);
-      keyboard.off('keydown-Q', this.handleSellKey);
-      keyboard.off('keydown-N', this.handleSkipHourKey);
+      keyboard.off('keydown-Q',   this.handleSellKey);
+      keyboard.off('keydown-N',   this.handleSkipHourKey);
+      keyboard.off('keydown-F5',  this.handleSaveKey);
+      keyboard.off('keydown-ESC', this.handleEscKey);
 
       this.shopKeyHandlers.forEach((handler, index) => {
         keyboard.off(`keydown-${index + 1}`, handler);
@@ -83,6 +88,26 @@ export class GameSession {
         runtime: this.runtime,
         ui: this.ui,
       });
+
+      // Hook up pause-menu actions
+      this.ui.onPauseAction = (action) => {
+        if (action === 'save') { void this.saveGame(); return; }
+        if (action === 'load') { void this.loadSaveFromMenu(); return; }
+        if (action === 'new')  { void this.newGame(); return; }
+        if (action === 'menu') {
+          // Transition to MenuScene — GameScene's SHUTDOWN listener will stop UIScene
+          this.scene.scene.start(SceneKey.Menu);
+        }
+      };
+
+      // Chain auto-save onto onNewDay (runs after bindRuntimeToUI's chain)
+      const _prevNewDay = this.runtime.dayNight.onNewDay;
+      this.runtime.dayNight.onNewDay = (day) => {
+        _prevNewDay?.(day);
+        void this.saveGame();
+      };
+
+      this.loadSave();
     };
 
     if (this.ui.scene.isActive()) {
@@ -98,8 +123,10 @@ export class GameSession {
     if (!keyboard) return;
 
     keyboard.on('keydown-TAB', this.handleTabKey);
-    keyboard.on('keydown-Q', this.handleSellKey);
-    keyboard.on('keydown-N', this.handleSkipHourKey);
+    keyboard.on('keydown-Q',   this.handleSellKey);
+    keyboard.on('keydown-N',   this.handleSkipHourKey);
+    keyboard.on('keydown-F5',  this.handleSaveKey);
+    keyboard.on('keydown-ESC', this.handleEscKey);
 
     this.shopKeyHandlers.forEach((handler, index) => {
       keyboard.on(`keydown-${index + 1}`, handler);
@@ -236,5 +263,45 @@ export class GameSession {
 
   private get currentTool(): ToolId {
     return TOOL_ORDER[this.toolIndex];
+  }
+
+  private togglePauseMenu(): void {
+    // Block ESC while dialog is open
+    if (this.dialog?.isOpen) return;
+    this.ui.togglePauseMenu();
+  }
+
+  private loadSave(): void {
+    void SaveSystem.load().then(data => {
+      if (!data || !this.dialog) return;
+      SaveSystem.apply(data, this.runtime, this.dialog);
+      this.toolIndex = data.toolIndex;
+      this.ui.setTool(TOOL_LABELS[this.currentTool]);
+      this.ui.notify('💾 Đã tải game!');
+    });
+  }
+
+  private async newGame(): Promise<void> {
+    await SaveSystem.deleteSave();
+    // Restart GameScene fresh
+    this.scene.scene.restart();
+  }
+
+  private async loadSaveFromMenu(): Promise<void> {
+    const data = await SaveSystem.load();
+    if (!data || !this.dialog) {
+      this.ui.notify('❌ Không có file lưu!', '#e74c3c');
+      return;
+    }
+    SaveSystem.apply(data, this.runtime, this.dialog);
+    this.toolIndex = data.toolIndex;
+    this.ui.setTool(TOOL_LABELS[this.currentTool]);
+    this.ui.notify('💾 Đã tải game!');
+  }
+
+  private async saveGame(): Promise<void> {
+    if (!this.dialog) return;
+    await SaveSystem.save(this.runtime, this.toolIndex, this.dialog);
+    this.ui.notify('💾 Đã lưu game!');
   }
 }

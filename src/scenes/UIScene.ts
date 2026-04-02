@@ -17,6 +17,8 @@ const TIME_LABELS: Record<TimeOfDay, string> = {
   night:     '🌙 Đêm',
 };
 
+export type PauseMenuAction = 'save' | 'load' | 'menu' | 'new';
+
 export class UIScene extends Phaser.Scene {
   private toolText!:    Phaser.GameObjects.Text;
   private fishingText!: Phaser.GameObjects.Text;
@@ -29,6 +31,12 @@ export class UIScene extends Phaser.Scene {
   private hotbarBgs:    Phaser.GameObjects.Rectangle[] = [];
   private hotbarEmojis: Phaser.GameObjects.Text[]      = [];
   private hotbarQtys:   Phaser.GameObjects.Text[]      = [];
+
+  // ── Pause menu ──────────────────────────────────────────────────────
+  private pauseContainer!:   Phaser.GameObjects.Container;
+  private confirmContainer!: Phaser.GameObjects.Container;
+  private isPauseOpen = false;
+  onPauseAction?: (action: PauseMenuAction) => void;
 
   constructor() {
     super({ key: SceneKey.UI });
@@ -86,9 +94,12 @@ export class UIScene extends Phaser.Scene {
     this.buildHotbar(hotbarX, hotbarY);
 
     // ── Hint ─────────────────────────────────────────────────────────────────
-    this.add.text(W / 2, H - 4, 'Tab: công cụ  |  E: tương tác  |  Q: bán tất cả  |  N: skip giờ', {
+    this.add.text(W / 2, H - 4, 'Tab: công cụ  |  E: tương tác  |  Q: bán tất cả  |  ESC: menu', {
       fontSize: '10px', color: '#ffffff55',
     }).setOrigin(0.5, 1);
+
+    // ── Pause menu (hidden by default) ───────────────────────────────────────
+    this.buildPauseMenu(W, H);
   }
 
   // ─── Hotbar ──────────────────────────────────────────────────────────────────
@@ -167,6 +178,160 @@ export class UIScene extends Phaser.Scene {
     this.notifText.setText(message).setBackgroundColor(color + '99').setAlpha(1);
     this.notifTimer = this.time.delayedCall(2500, () => {
       this.tweens.add({ targets: this.notifText, alpha: 0, duration: 400 });
+    });
+  }
+
+  get isPauseMenuOpen(): boolean {
+    return this.isPauseOpen;
+  }
+
+  togglePauseMenu(): void {
+    this.isPauseOpen ? this.closePauseMenu() : this.openPauseMenu();
+  }
+
+  private openPauseMenu(): void {
+    if (this.isPauseOpen) return;
+    this.isPauseOpen = true;
+    this.pauseContainer.setVisible(true).setAlpha(0);
+    this.tweens.add({ targets: this.pauseContainer, alpha: 1, duration: 180 });
+  }
+
+  closePauseMenu(): void {
+    if (!this.isPauseOpen) return;
+    this.isPauseOpen = false;
+    this.tweens.add({
+      targets: this.pauseContainer,
+      alpha: 0,
+      duration: 150,
+      onComplete: () => this.pauseContainer.setVisible(false),
+    });
+  }
+
+  private buildPauseMenu(W: number, H: number): void {
+    const CX = W / 2;
+    const CY = H / 2;
+    const BOX_W = 260;
+    const BOX_H = 282;  // taller to fit 4 buttons
+
+    const overlay = this.add.rectangle(0, 0, W, H, 0x000000, 0.55).setOrigin(0);
+
+    const box = this.add.rectangle(CX, CY, BOX_W, BOX_H, 0x1a2a0f, 0.95)
+      .setStrokeStyle(2, 0x6abf3e, 1);
+
+    const title = this.add.text(CX, CY - BOX_H / 2 + 24, '⏸ Tạm dừng', {
+      fontSize: '18px', color: '#ffe066',
+      fontStyle: 'bold',
+      stroke: '#000000', strokeThickness: 3,
+    }).setOrigin(0.5);
+
+    const divider = this.add.rectangle(CX, CY - BOX_H / 2 + 44, BOX_W - 40, 1, 0x6abf3e, 0.5);
+
+    const mainItems: { label: string; action: PauseMenuAction }[] = [
+      { label: '💾  Lưu game',  action: 'save' },
+      { label: '📂  Tải game',  action: 'load' },
+      { label: '🏠  Về menu',   action: 'menu' },
+    ];
+
+    const buttons = mainItems.map((item, i) => {
+      const btnY = CY - 52 + i * 52;
+      const btn = this.add.text(CX, btnY, item.label, {
+        fontSize: '15px', color: '#d0f0a0',
+        backgroundColor: '#2a4a1a',
+        padding: { x: 24, y: 10 },
+      })
+        .setOrigin(0.5)
+        .setInteractive({ useHandCursor: true })
+        .on('pointerover',  () => btn.setColor('#ffffff').setBackgroundColor('#3d6e22'))
+        .on('pointerout',   () => btn.setColor('#d0f0a0').setBackgroundColor('#2a4a1a'))
+        .on('pointerdown',  () => {
+          this.closePauseMenu();
+          this.onPauseAction?.(item.action);
+        });
+      return btn;
+    });
+
+    // Separator line before the danger button
+    const sep = this.add.rectangle(CX, CY + 102, BOX_W - 60, 1, 0xff4444, 0.35);
+
+    // "New game" danger button
+    const newBtn = this.add.text(CX, CY + 118, '🗑️  Xóa & Chơi mới', {
+      fontSize: '13px', color: '#ff9999',
+      backgroundColor: '#3a1010',
+      padding: { x: 20, y: 8 },
+    })
+      .setOrigin(0.5)
+      .setInteractive({ useHandCursor: true })
+      .on('pointerover',  () => newBtn.setColor('#ffffff').setBackgroundColor('#6e1a1a'))
+      .on('pointerout',   () => newBtn.setColor('#ff9999').setBackgroundColor('#3a1010'))
+      .on('pointerdown',  () => this.openConfirm());
+
+    const hint = this.add.text(CX, CY + BOX_H / 2 - 12, 'ESC đóng', {
+      fontSize: '10px', color: '#ffffff55',
+    }).setOrigin(0.5);
+
+    this.pauseContainer = this.add.container(0, 0, [overlay, box, title, divider, sep, hint, ...buttons, newBtn]);
+    this.pauseContainer.setVisible(false).setAlpha(0);
+    this.pauseContainer.setDepth(100);
+
+    // Build the confirm dialog (hidden by default, depth above pause menu)
+    this.buildConfirmDialog(W, H);
+  }
+
+  private buildConfirmDialog(W: number, H: number): void {
+    const CX = W / 2;
+    const CY = H / 2;
+    const BW = 280;
+    const BH = 150;
+
+    const backdrop = this.add.rectangle(0, 0, W, H, 0x000000, 0.4).setOrigin(0);
+    const box = this.add.rectangle(CX, CY, BW, BH, 0x2a0a0a, 0.97)
+      .setStrokeStyle(2, 0xff4444, 1);
+    const msg = this.add.text(CX, CY - 34, '⚠️  Xóa toàn bộ tiến trình?\nKhông thể hoàn tác!', {
+      fontSize: '13px', color: '#ffcccc', align: 'center',
+    }).setOrigin(0.5);
+
+    const yesBtn = this.add.text(CX - 54, CY + 34, '✔ Xác nhận', {
+      fontSize: '13px', color: '#ff9999',
+      backgroundColor: '#5a1010',
+      padding: { x: 14, y: 8 },
+    })
+      .setOrigin(0.5)
+      .setInteractive({ useHandCursor: true })
+      .on('pointerover',  () => yesBtn.setColor('#ffffff').setBackgroundColor('#8a1a1a'))
+      .on('pointerout',   () => yesBtn.setColor('#ff9999').setBackgroundColor('#5a1010'))
+      .on('pointerdown',  () => {
+        this.closeConfirm();
+        this.closePauseMenu();
+        this.onPauseAction?.('new');
+      });
+
+    const noBtn = this.add.text(CX + 54, CY + 34, '✖ Hủy', {
+      fontSize: '13px', color: '#d0f0a0',
+      backgroundColor: '#2a4a1a',
+      padding: { x: 14, y: 8 },
+    })
+      .setOrigin(0.5)
+      .setInteractive({ useHandCursor: true })
+      .on('pointerover',  () => noBtn.setColor('#ffffff').setBackgroundColor('#3d6e22'))
+      .on('pointerout',   () => noBtn.setColor('#d0f0a0').setBackgroundColor('#2a4a1a'))
+      .on('pointerdown',  () => this.closeConfirm());
+
+    this.confirmContainer = this.add.container(0, 0, [backdrop, box, msg, yesBtn, noBtn]);
+    this.confirmContainer.setVisible(false);
+    this.confirmContainer.setDepth(110);
+  }
+
+  private openConfirm(): void {
+    this.confirmContainer.setVisible(true).setAlpha(0);
+    this.tweens.add({ targets: this.confirmContainer, alpha: 1, duration: 140 });
+  }
+
+  private closeConfirm(): void {
+    this.tweens.add({
+      targets: this.confirmContainer,
+      alpha: 0,
+      duration: 120,
+      onComplete: () => this.confirmContainer.setVisible(false),
     });
   }
 }

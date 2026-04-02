@@ -98,6 +98,14 @@ export class DialogSystem {
 
   get isOpen(): boolean { return this.mode !== 'closed'; }
 
+  getCompletedQuests(): string[] {
+    return [...this.completedQuests];
+  }
+
+  loadCompletedQuests(ids: string[]): void {
+    this.completedQuests = new Set(ids);
+  }
+
   // ─── Advance / interact ──────────────────────────────────────────────────────
 
   /** Call when player presses E while dialog is open */

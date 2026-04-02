@@ -152,4 +152,17 @@ export class InventorySystem {
     this.onChange?.();
     return true;
   }
+
+  /** Restore inventory state from a save file */
+  loadState(slots: ({ id: ItemId; qty: number } | null)[], gold: number): void {
+    this.slots = Array(InventorySystem.MAX_SLOTS).fill(null);
+    for (let i = 0; i < slots.length && i < InventorySystem.MAX_SLOTS; i++) {
+      const s = slots[i];
+      if (s && ITEMS[s.id]) {
+        this.slots[i] = { item: ITEMS[s.id], qty: s.qty };
+      }
+    }
+    this._gold = gold;
+    this.onChange?.();
+  }
 }

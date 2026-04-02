@@ -1,5 +1,8 @@
-const { app, BrowserWindow } = require('electron');
+const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
+const Store = require('electron-store');
+
+const store = new Store({ name: 'my-valley-save' });
 
 function createWindow() {
   const win = new BrowserWindow({
@@ -10,6 +13,7 @@ function createWindow() {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
+      preload: path.join(__dirname, 'preload.cjs'),
     },
   });
 
@@ -17,7 +21,15 @@ function createWindow() {
   win.loadFile(path.join(__dirname, '../dist/index.html'));
 }
 
-app.whenReady().then(createWindow);
+app.whenReady().then(() => {
+  // ─── IPC handlers ──────────────────────────────────────────────────────────
+  ipcMain.handle('save-game',    (_e, data) => { store.set('saveData', data); });
+  ipcMain.handle('load-game',    ()         => store.get('saveData', null));
+  ipcMain.handle('has-save',     ()         => store.has('saveData'));
+  ipcMain.handle('delete-save',  ()         => { store.delete('saveData'); });
+
+  createWindow();
+});
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();

@@ -85,6 +85,14 @@ export class DayNightSystem {
     this.onTimeChange?.(this.state);
   }
 
+  /** Restore day/time from a save file */
+  loadState(day: number, totalMinute: number): void {
+    this._day    = Math.max(1, day);
+    this._minute = Math.max(0, Math.min(23 * 60 + 59, totalMinute));
+    this._accMs  = 0;
+    this.onTimeChange?.(this.state);
+  }
+
   // ─── Interpolation ──────────────────────────────────────────────────────────
 
   private interpolate(decimalHour: number): { tint: number; alpha: number; label: TimeOfDay } {

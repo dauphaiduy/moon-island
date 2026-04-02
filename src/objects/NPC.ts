@@ -212,6 +212,12 @@ export class NPC extends Phaser.GameObjects.Container {
     this.updateHearts();
   }
 
+  /** Restore friendship directly from a save file (no cap-check needed — data was valid when saved) */
+  setFriendship(value: number): void {
+    this._friendship = Math.max(0, Math.min(MAX_FRIENDSHIP, value));
+    this.updateHearts();
+  }
+
   /** Called by DialogSystem when a chat is opened. Returns true on first chat of day (gains +1). */
   tryDailyChat(): boolean {
     if (this.chattedToday) return false;

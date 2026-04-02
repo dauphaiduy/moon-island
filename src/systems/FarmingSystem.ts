@@ -117,6 +117,20 @@ export class FarmingSystem {
     return this.tiles.get(this.key(tileX, tileY));
   }
 
+  /** All active farm tiles — used for serialization */
+  getAllTiles(): FarmTile[] {
+    return [...this.tiles.values()];
+  }
+
+  /** Restore farm state from a save file */
+  loadTiles(saved: FarmTile[]): void {
+    this.tiles.clear();
+    for (const t of saved) {
+      this.tiles.set(this.key(t.tileX, t.tileY), { ...t });
+    }
+    this.redraw();
+  }
+
   private redraw(): void {
     this.graphics.clear();
 

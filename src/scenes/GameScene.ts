@@ -15,6 +15,10 @@ export class GameScene extends Phaser.Scene {
 
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.session.destroy();
+      // Stop the UI overlay so it doesn't linger when returning to the menu
+      if (this.scene.isActive(SceneKey.UI)) {
+        this.scene.stop(SceneKey.UI);
+      }
     });
   }
 
