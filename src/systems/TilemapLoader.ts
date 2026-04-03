@@ -16,6 +16,7 @@ export type ZoneType = 'grass' | 'farm' | 'water' | 'path' | 'none';
 //   Everything else            → ground / visual decoration, fully walkable
 const LAYER_CONFIG: Array<{ name: string; collides: boolean; zone?: ZoneType }> = [
   { name: 'Background',          collides: false},
+  { name: 'water',               collides: true, zone: 'water'  },
   { name: 'Sand',                collides: false, zone: 'grass'  },
   { name: 'Cliff',               collides: true               },
   { name: 'Rocks',               collides: false               },
@@ -25,9 +26,10 @@ const LAYER_CONFIG: Array<{ name: string; collides: boolean; zone?: ZoneType }> 
   { name: 'Stairs',              collides: false, zone: 'grass'  },
   { name: 'Shadows',             collides: false               },
   { name: 'Buildings',           collides: true               },
+  { name: 'Shop - Weapon',       collides: true               },
+  { name: 'Dungeon',             collides: true               },
   { name: 'Trees front',         collides: false               },
   { name: 'Miscs',               collides: false               },
-  { name: 'water',               collides: true, zone: 'water'  },
 ];
 
 export class TilemapLoader {
