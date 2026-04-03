@@ -23,7 +23,7 @@ export class MenuScene extends Phaser.Scene {
 
     this.add.rectangle(width / 2, height / 2, 400, 200, 0x000000, 0.5).setOrigin(0.5);
       
-    this.add.text(width / 2, height / 2 - 60, '🌾 My Valley', {
+    this.add.text(width / 2, height / 2 - 60, '🌑 Moon Island', {
       fontSize: '36px',
       color: '#ffffff',
       fontStyle: 'bold',

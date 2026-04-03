@@ -9,7 +9,7 @@ function createWindow() {
     width: 800,
     height: 600,
     resizable: false,
-    title: 'My Valley',
+    title: 'Moon Island',
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,

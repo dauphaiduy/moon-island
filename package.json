@@ -24,8 +24,8 @@
     "phaser": "^3.90.0"
   },
   "build": {
-    "appId": "com.myvalley.game",
-    "productName": "My Valley",
+    "appId": "com.moonisland.game",
+    "productName": "Moon Island",
     "files": [
       "dist/**/*",
       "electron/main.cjs"
