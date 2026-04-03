@@ -1,5 +1,6 @@
 import type { ItemId } from '../types';
 import { ITEMS } from '../data/items';
+import { SceneKey } from '../constants';
 import { TOOL_SHOP_CATALOG } from '../objects/ShopBuilding';
 import type { GameRuntime } from './createGameRuntime';
 import type { UIScene } from '../scenes/UIScene';
@@ -37,6 +38,21 @@ export class InteractionHandler {
     // E also closes an open shop panel
     if (this.ui.isShopPanelOpen) {
       this.ui.closeShopPanel();
+      return;
+    }
+
+    // E also closes an open confirm dialog
+    if (this.ui.isConfirmOpen) {
+      this.ui.closeConfirm();
+      return;
+    }
+
+    // ── Dungeon entrance ─────────────────────────────────────────────────────────
+    if (this.runtime.dungeonEntrance.isNearPlayer(this.runtime.player.x, this.runtime.player.y)) {
+      this.ui.openConfirm(
+        'Bạn có muốn vào Hầm Ngục không?',
+        () => this.ui.startScene(SceneKey.Dungeon),
+      );
       return;
     }
 

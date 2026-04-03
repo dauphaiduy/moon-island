@@ -3,6 +3,7 @@ import { GameScene } from '../scenes/GameScene';
 import { MenuScene } from '../scenes/MenuScene';
 import { PreloadScene } from '../scenes/PreloadScene';
 import { UIScene } from '../scenes/UIScene';
+import { DungeonScene } from '../scenes/DungeonScene';
 
 export function createGameConfig(): Phaser.Types.Core.GameConfig {
   return {
@@ -12,7 +13,7 @@ export function createGameConfig(): Phaser.Types.Core.GameConfig {
     backgroundColor: '#1a2e1a',
     pixelArt: true,
     roundPixels: true,
-    scene: [PreloadScene, MenuScene, GameScene, UIScene],
+    scene: [PreloadScene, MenuScene, GameScene, UIScene, DungeonScene],
     physics: {
       default: 'arcade',
       arcade: {

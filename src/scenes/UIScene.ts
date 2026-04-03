@@ -7,6 +7,7 @@ import type { ItemId } from '../types';
 import { PauseMenuPanel } from '../ui/PauseMenuPanel';
 import { InventoryPanel } from '../ui/InventoryPanel';
 import { ShopPanel } from '../ui/ShopPanel';
+import { ConfirmDialog } from '../ui/ConfirmDialog';
 
 export type { PauseMenuAction } from '../ui/PauseMenuPanel';
 
@@ -42,6 +43,7 @@ export class UIScene extends Phaser.Scene {
   private pauseMenu!: PauseMenuPanel;
   private inventory!: InventoryPanel;
   private shop!:      ShopPanel;
+  private confirm!:   ConfirmDialog;
 
   // ── Callbacks (wired by GameSession) ─────────────────────────────────────
   onPauseAction?: (action: import('../ui/PauseMenuPanel').PauseMenuAction) => void;
@@ -119,11 +121,16 @@ export class UIScene extends Phaser.Scene {
     this.shop.onBuy     = (itemId, price) => this.onShopBuy?.(itemId, price);
     this.shop.onSell    = (si) => this.onShopSell?.(si);
     this.shop.onSellAll = (si) => this.onShopSellAll?.(si);
+
+    this.confirm = new ConfirmDialog(this, W, H);
   }
 
   // ─── Hotbar ──────────────────────────────────────────────────────────────────
 
   private buildHotbar(ox: number, oy: number): void {
+    this.hotbarBgs    = [];
+    this.hotbarEmojis = [];
+    this.hotbarQtys   = [];
     for (let i = 0; i < HOTBAR_COLS; i++) {
       const x = ox + i * (SLOT_SIZE + SLOT_GAP);
 
@@ -226,4 +233,14 @@ export class UIScene extends Phaser.Scene {
     this.shop.open(catalog, inventory, npcName, npcEmoji);
   }
   closeShopPanel(): void { this.shop.close(); }
+
+  get isConfirmOpen(): boolean { return this.confirm.isOpen; }
+  openConfirm(message: string, onConfirm: () => void): void { this.confirm.open(message, onConfirm); }
+  closeConfirm(): void { this.confirm.close(); }
+
+  /** Start a new scene, stopping the UI overlay. */
+  startScene(key: string): void {
+    this.scene.stop();
+    this.scene.start(key);
+  }
 }

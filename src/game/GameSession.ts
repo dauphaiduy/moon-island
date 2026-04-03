@@ -73,6 +73,12 @@ export class GameSession {
       this.runtime.toolShop.hideBubble();
     }
 
+    if (this.runtime.dungeonEntrance.isNearPlayer(px, py)) {
+      this.runtime.dungeonEntrance.highlightBubble(this.scene);
+    } else {
+      this.runtime.dungeonEntrance.hideBubble();
+    }
+
     if (this.runtime.player.interactJustPressed) {
       this.interact.handle();
     }
@@ -149,7 +155,8 @@ export class GameSession {
     };
 
     if (this.ui.scene.isActive()) {
-      bindUi();
+      // Defer by one tick so create() finishes assigning this.interact first
+      this.scene.time.delayedCall(0, bindUi);
       return;
     }
 
@@ -193,6 +200,8 @@ export class GameSession {
   private togglePauseMenu(): void {
     // Block ESC while dialog is open
     if (this.dialog?.isOpen) return;
+    // ESC closes confirm dialog if open
+    if (this.ui.isConfirmOpen) { this.ui.closeConfirm(); return; }
     // ESC also closes shop panel if open
     if (this.ui.isShopPanelOpen) { this.ui.closeShopPanel(); return; }
     // ESC also closes inventory if open

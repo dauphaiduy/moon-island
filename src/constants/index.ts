@@ -21,6 +21,7 @@ export const SceneKey = {
   Menu:    'MenuScene',
   Game:    'GameScene',
   UI:      'UIScene',
+  Dungeon: 'DungeonScene',
 } as const;
 type SceneKey = typeof SceneKey[keyof typeof SceneKey];
 
