@@ -11,6 +11,9 @@ export const ITEMS: Record<ItemId, ItemDef> = {
   seed_wheat:   { id: 'seed_wheat',   name: 'Hạt lúa',     emoji: '🌱', maxStack: 99, category: 'seed', sellPrice: 5   },
   seed_carrot:  { id: 'seed_carrot',  name: 'Hạt cà rốt',  emoji: '🌿', maxStack: 99, category: 'seed', sellPrice: 8   },
   seed_tomato:  { id: 'seed_tomato',  name: 'Hạt cà chua', emoji: '🪴', maxStack: 99, category: 'seed', sellPrice: 10  },
+  tool_hoe:         { id: 'tool_hoe',         name: 'Cuốc',      emoji: '⛏️', maxStack: 1, category: 'tool', sellPrice: 0 },
+  tool_wateringCan: { id: 'tool_wateringCan', name: 'Bình tưới', emoji: '🪣', maxStack: 1, category: 'tool', sellPrice: 0 },
+  tool_fishingRod:  { id: 'tool_fishingRod',  name: 'Cần câu',   emoji: '🎣', maxStack: 1, category: 'tool', sellPrice: 0 },
 };
 
 /** Maps fish display names (from FishingSystem) to their ItemId */

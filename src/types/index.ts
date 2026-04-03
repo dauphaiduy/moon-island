@@ -42,14 +42,17 @@ export type ItemId =
   | 'fish_rare'
   | 'seed_wheat'
   | 'seed_carrot'
-  | 'seed_tomato';
+  | 'seed_tomato'
+  | 'tool_hoe'
+  | 'tool_wateringCan'
+  | 'tool_fishingRod';
 
 export interface ItemDef {
   id: ItemId;
   name: string;       // tên tiếng Việt
   emoji: string;      // icon hiển thị
   maxStack: number;   // số lượng tối đa mỗi slot
-  category: 'crop' | 'fish' | 'seed';
+  category: 'crop' | 'fish' | 'seed' | 'tool';
   sellPrice: number;
 }
 

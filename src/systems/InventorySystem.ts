@@ -11,6 +11,7 @@ export class InventorySystem {
 
   private slots: (InventorySlot | null)[] = Array(InventorySystem.MAX_SLOTS).fill(null);
   private _gold = 0;
+  private activeSlot = 0;
 
   // Callbacks — set from GameScene / UIScene
   onChange?: () => void;
@@ -71,12 +72,12 @@ export class InventorySystem {
     return true;
   }
 
-  /** Sell everything — add gold. */
+  /** Sell everything — add gold. Skips tools. */
   sellAll(): number {
     let earned = 0;
     for (let i = 0; i < this.slots.length; i++) {
       const slot = this.slots[i];
-      if (slot) {
+      if (slot && slot.item.category !== 'tool') {
         earned += slot.item.sellPrice * slot.qty;
         this.slots[i] = null;
       }
@@ -140,9 +141,19 @@ export class InventorySystem {
     this.onChange?.();
   }
 
+  /** Get the currently active hotbar slot index (0–7) */
+  getActiveSlot(): number { return this.activeSlot; }
+
+  /** Set the active hotbar slot — clamped to 0–7 */
+  setActiveSlot(i: number): void {
+    this.activeSlot = Math.max(0, Math.min(InventorySystem.HOTBAR_SLOTS - 1, i));
+    this.onChange?.();
+  }
+
   /** Restore inventory state from a save file */
   loadState(slots: ({ id: ItemId; qty: number } | null)[], gold: number): void {
     this.slots = Array(InventorySystem.MAX_SLOTS).fill(null);
+    this.activeSlot = 0;
     for (let i = 0; i < slots.length && i < InventorySystem.MAX_SLOTS; i++) {
       const s = slots[i];
       if (s && ITEMS[s.id]) {

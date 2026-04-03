@@ -64,9 +64,9 @@ export const NPC_DEFS: NpcDef[] = [
       },
     ],
     shop: [
-      { itemId: 'seed_wheat',  price: 30,  stock: -1 },
-      { itemId: 'seed_carrot', price: 50,  stock: -1 },
-      { itemId: 'seed_tomato', price: 80,  stock: -1 },
+      { itemId: 'seed_wheat',  price: 5,  stock: -1 },
+      { itemId: 'seed_carrot', price: 8,  stock: -1 },
+      { itemId: 'seed_tomato', price: 10,  stock: -1 },
     ],
   },
 

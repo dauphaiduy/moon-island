@@ -32,7 +32,10 @@ export function createGameRuntime(scene: Phaser.Scene): GameRuntime {
   const inventory = new InventorySystem();
   const dayNight = new DayNightSystem();
 
-  // Give the player a handful of starter seeds
+  // Give the player starter tools (slots 0–2) then seeds (slots 3–5)
+  inventory.add('tool_hoe', 1);
+  inventory.add('tool_wateringCan', 1);
+  inventory.add('tool_fishingRod', 1);
   inventory.add('seed_wheat',  5);
   inventory.add('seed_carrot', 3);
   inventory.add('seed_tomato', 2);

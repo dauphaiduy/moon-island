@@ -5,7 +5,7 @@ import { ITEMS } from '../data/items';
 import type { ItemId } from '../types';
 import { bindRuntimeToUI } from './bindRuntimeToUI';
 import { createGameRuntime, type GameRuntime } from './createGameRuntime';
-import { TOOL_LABELS, TOOL_ORDER, type ToolId } from './gameTools';
+import type { ToolId } from './gameTools';
 import type { DialogSystem } from '../systems/DialogSystem';
 import { SaveSystem } from '../systems/SaveSystem';
 
@@ -17,11 +17,16 @@ export class GameSession {
   private readonly handleSaveKey = () => { void this.saveGame(); };
   private readonly handleEscKey  = () => this.togglePauseMenu();
   private readonly handleInvKey  = () => this.toggleInventory();
-  private readonly shopKeyHandlers = [0, 1, 2].map((index) => () => this.buyShopItem(index));
+  // Keys 1–8: select hotbar slot; keys 1–3 also buy shop items when dialog is open
+  // Phaser maps digit row keys to KeyCode names: ONE, TWO, THREE, …, EIGHT
+  private static readonly NUMBER_KEY_NAMES = ['ONE','TWO','THREE','FOUR','FIVE','SIX','SEVEN','EIGHT'] as const;
+  private readonly numberKeyHandlers = [1, 2, 3, 4, 5, 6, 7, 8].map((n) => () => {
+    if (this.dialog?.isOpen && n <= 3) { this.buyShopItem(n - 1); }
+    else if (!this.dialog?.isOpen)    { this.runtime.inventory.setActiveSlot(n - 1); }
+  });
   private runtime!: GameRuntime;
   private ui!: UIScene;
   private dialog?: DialogSystem;
-  private toolIndex = 0;
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
@@ -45,8 +50,8 @@ export class GameSession {
       keyboard.off('keydown-ESC', this.handleEscKey);
       keyboard.off('keydown-I',   this.handleInvKey);
 
-      this.shopKeyHandlers.forEach((handler, index) => {
-        keyboard.off(`keydown-${index + 1}`, handler);
+      this.numberKeyHandlers.forEach((handler, index) => {
+        keyboard.off(`keydown-${GameSession.NUMBER_KEY_NAMES[index]}`, handler);
       });
     }
 
@@ -101,6 +106,41 @@ export class GameSession {
           this.scene.scene.start(SceneKey.Menu);
         }
       };
+      // Shop buy callback
+      this.ui.onShopBuy = (itemId, price) => {
+        if (!this.runtime.inventory.adjustGold(-price)) {
+          this.ui.notify('💸 Không đủ tiền!', '#e74c3c');
+          return;
+        }
+        const leftover = this.runtime.inventory.add(itemId, 1);
+        if (leftover > 0) {
+          // Refund if inventory full
+          this.runtime.inventory.adjustGold(price);
+          this.ui.notify('⚠️ Túi đồ đầy!', '#e67e22');
+          return;
+        }
+        this.ui.notify(`🛒 Đã mua ${ITEMS[itemId].emoji} ${ITEMS[itemId].name}!`);
+      };
+
+      // Shop sell callback
+      this.ui.onShopSell = (slotIndex) => {
+        const slot = this.runtime.inventory.getSlot(slotIndex);
+        if (!slot) return;
+        const earned = slot.item.sellPrice;
+        this.runtime.inventory.remove(slotIndex, 1);
+        this.runtime.inventory.adjustGold(earned);
+        this.ui.notify(`💰 Bán ${slot.item.emoji} ${slot.item.name} được ${earned}G!`);
+      };
+
+      this.ui.onShopSellAll = (slotIndex) => {
+        const slot = this.runtime.inventory.getSlot(slotIndex);
+        if (!slot) return;
+        const qty = slot.qty;
+        const earned = slot.item.sellPrice * slot.qty;
+        this.runtime.inventory.remove(slotIndex, slot.qty);
+        this.runtime.inventory.adjustGold(earned);
+        this.ui.notify(`💰 Bán ${qty}x ${slot.item.emoji} ${slot.item.name} được ${earned}G!`);
+      };
 
       // Chain auto-save onto onNewDay (runs after bindRuntimeToUI's chain)
       const _prevNewDay = this.runtime.dayNight.onNewDay;
@@ -131,8 +171,8 @@ export class GameSession {
     keyboard.on('keydown-ESC', this.handleEscKey);
     keyboard.on('keydown-I',   this.handleInvKey);
 
-    this.shopKeyHandlers.forEach((handler, index) => {
-      keyboard.on(`keydown-${index + 1}`, handler);
+    this.numberKeyHandlers.forEach((handler, index) => {
+      keyboard.on(`keydown-${GameSession.NUMBER_KEY_NAMES[index]}`, handler);
     });
   }
 
@@ -145,10 +185,8 @@ export class GameSession {
 
   private cycleTool(): void {
     if (this.dialog?.isOpen) return;
-
-    this.toolIndex = (this.toolIndex + 1) % TOOL_ORDER.length;
-    const tool = this.currentTool;
-    this.ui.setTool(TOOL_LABELS[tool]);
+    const current = this.runtime.inventory.getActiveSlot();
+    this.runtime.inventory.setActiveSlot((current + 1) % 8);
   }
 
   private sellInventory(): void {
@@ -178,8 +216,19 @@ export class GameSession {
       return;
     }
 
+    // E also closes the shop panel
+    if (this.ui.isShopPanelOpen) {
+      this.ui.closeShopPanel();
+      return;
+    }
+
     const nearby = this.findNearbyNpc();
     if (nearby) {
+      // Shop NPC — open the interactive shop panel instead of DialogSystem
+      if (nearby.def.shop) {
+        this.ui.openShopPanel(nearby.def.shop, this.runtime.inventory, nearby.def.name, nearby.def.emoji);
+        return;
+      }
       this.dialog?.open(nearby);
       return;
     }
@@ -265,12 +314,21 @@ export class GameSession {
   }
 
   private get currentTool(): ToolId {
-    return TOOL_ORDER[this.toolIndex];
+    const slot = this.runtime.inventory.getSlot(this.runtime.inventory.getActiveSlot());
+    if (!slot) return 'none';
+    const toolMap: Partial<Record<string, ToolId>> = {
+      tool_hoe:         'hoe',
+      tool_wateringCan: 'wateringCan',
+      tool_fishingRod:  'fishingRod',
+    };
+    return toolMap[slot.item.id] ?? 'none';
   }
 
   private togglePauseMenu(): void {
     // Block ESC while dialog is open
     if (this.dialog?.isOpen) return;
+    // ESC also closes shop panel if open
+    if (this.ui.isShopPanelOpen) { this.ui.closeShopPanel(); return; }
     // ESC also closes inventory if open
     if (this.ui.isInventoryOpen) { this.ui.closeInventoryPanel(); return; }
     this.ui.togglePauseMenu();
@@ -279,6 +337,7 @@ export class GameSession {
   private toggleInventory(): void {
     if (this.dialog?.isOpen) return;
     if (this.ui.isPauseMenuOpen) return;
+    if (this.ui.isShopPanelOpen) return;
     this.ui.toggleInventoryPanel(this.runtime.inventory);
   }
 
@@ -286,8 +345,6 @@ export class GameSession {
     void SaveSystem.load().then(data => {
       if (!data || !this.dialog) return;
       SaveSystem.apply(data, this.runtime, this.dialog);
-      this.toolIndex = data.toolIndex;
-      this.ui.setTool(TOOL_LABELS[this.currentTool]);
       this.ui.notify('💾 Đã tải game!');
     });
   }
@@ -305,14 +362,12 @@ export class GameSession {
       return;
     }
     SaveSystem.apply(data, this.runtime, this.dialog);
-    this.toolIndex = data.toolIndex;
-    this.ui.setTool(TOOL_LABELS[this.currentTool]);
     this.ui.notify('💾 Đã tải game!');
   }
 
   private async saveGame(): Promise<void> {
     if (!this.dialog) return;
-    await SaveSystem.save(this.runtime, this.toolIndex, this.dialog);
+    await SaveSystem.save(this.runtime, this.runtime.inventory.getActiveSlot(), this.dialog);
     this.ui.notify('💾 Đã lưu game!');
   }
 }

@@ -142,6 +142,7 @@ export class SaveSystem {
 
     // Inventory: gold + slots
     runtime.inventory.loadState(data.slots, data.gold);
+    runtime.inventory.setActiveSlot(data.toolIndex);
 
     // Farm tiles (cast cropType back to CropType — it was serialised from a valid CropType)
     runtime.farming.loadTiles(
