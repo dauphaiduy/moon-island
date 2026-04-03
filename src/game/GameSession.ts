@@ -2,60 +2,48 @@ import Phaser from 'phaser';
 import { SceneKey } from '../constants';
 import type { UIScene } from '../scenes/UIScene';
 import { ITEMS } from '../data/items';
-import type { ItemId } from '../types';
-import { TOOL_SHOP_CATALOG } from '../objects/ShopBuilding';
 import { bindRuntimeToUI } from './bindRuntimeToUI';
 import { createGameRuntime, type GameRuntime } from './createGameRuntime';
-import type { ToolId } from './gameTools';
 import type { DialogSystem } from '../systems/DialogSystem';
 import { SaveSystem } from '../systems/SaveSystem';
+import { InputController } from './InputController';
+import { InteractionHandler } from './InteractionHandler';
 
 export class GameSession {
   private readonly scene: Phaser.Scene;
-  private readonly handleTabKey  = () => this.cycleTool();
-  private readonly handleSellKey = () => this.sellInventory();
-  private readonly handleSkipHourKey = () => this.advanceHour();
-  private readonly handleSaveKey = () => { void this.saveGame(); };
-  private readonly handleEscKey  = () => this.togglePauseMenu();
-  private readonly handleInvKey  = () => this.toggleInventory();
-  // Keys 1–8: select hotbar slot; keys 1–3 also buy shop items when dialog is open
-  // Phaser maps digit row keys to KeyCode names: ONE, TWO, THREE, …, EIGHT
-  private static readonly NUMBER_KEY_NAMES = ['ONE','TWO','THREE','FOUR','FIVE','SIX','SEVEN','EIGHT'] as const;
-  private readonly numberKeyHandlers = [1, 2, 3, 4, 5, 6, 7, 8].map((n) => () => {
-    if (this.dialog?.isOpen && n <= 3) { this.buyShopItem(n - 1); }
-    else if (!this.dialog?.isOpen)    { this.runtime.inventory.setActiveSlot(n - 1); }
-  });
+  private readonly input: InputController;
   private runtime!: GameRuntime;
   private ui!: UIScene;
+  private interact!: InteractionHandler;
   private dialog?: DialogSystem;
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
+    this.input = new InputController(scene);
   }
 
   create(): void {
-    this.runtime = createGameRuntime(this.scene);
+    this.runtime  = createGameRuntime(this.scene);
     this.setupCamera();
-    this.launchUiScene();
-    this.bindKeyboard();
+    this.launchUiScene();                                      // sets this.ui
+    this.interact = new InteractionHandler(this.runtime, this.ui);
+    this.input.bind({
+      cycleTool:       () => this.cycleTool(),
+      sell:            () => this.sellInventory(),
+      skipHour:        () => this.advanceHour(),
+      save:            () => { void this.saveGame(); },
+      togglePause:     () => this.togglePauseMenu(),
+      toggleInventory: () => this.toggleInventory(),
+      numberKey: (n) => {
+        if (this.dialog?.isOpen && n <= 3) { this.buyShopItem(n - 1); }
+        else if (!this.dialog?.isOpen)     { this.runtime.inventory.setActiveSlot(n - 1); }
+      },
+    });
     this.scene.scale.on('resize', this.setupCamera, this);
   }
 
   destroy(): void {
-    const keyboard = this.scene.input.keyboard;
-    if (keyboard) {
-      keyboard.off('keydown-TAB', this.handleTabKey);
-      keyboard.off('keydown-Q',   this.handleSellKey);
-      keyboard.off('keydown-N',   this.handleSkipHourKey);
-      keyboard.off('keydown-F5',  this.handleSaveKey);
-      keyboard.off('keydown-ESC', this.handleEscKey);
-      keyboard.off('keydown-I',   this.handleInvKey);
-
-      this.numberKeyHandlers.forEach((handler, index) => {
-        keyboard.off(`keydown-${GameSession.NUMBER_KEY_NAMES[index]}`, handler);
-      });
-    }
-
+    this.input.destroy();
     this.scene.scale.off('resize', this.setupCamera, this);
   }
 
@@ -70,7 +58,7 @@ export class GameSession {
       npc.update(px, py);
     }
 
-    const nearby = this.findNearbyNpc();
+    const nearby = this.runtime.npcs.find((npc) => npc.isNearPlayer(px, py));
     if (nearby) nearby.highlightBubble(this.scene);
 
     if (this.runtime.boat.isNearPlayer(px, py)) {
@@ -86,7 +74,7 @@ export class GameSession {
     }
 
     if (this.runtime.player.interactJustPressed) {
-      this.handleInteract();
+      this.interact.handle();
     }
 
     this.ui?.setFishingStatus(this.runtime.fishing.getStatusText());
@@ -102,6 +90,7 @@ export class GameSession {
         runtime: this.runtime,
         ui: this.ui,
       });
+      this.interact.setDialog(this.dialog);
 
       // Hook up pause-menu actions
       this.ui.onPauseAction = (action) => {
@@ -167,22 +156,6 @@ export class GameSession {
     this.ui.events.once(Phaser.Scenes.Events.CREATE, bindUi);
   }
 
-  private bindKeyboard(): void {
-    const keyboard = this.scene.input.keyboard;
-    if (!keyboard) return;
-
-    keyboard.on('keydown-TAB', this.handleTabKey);
-    keyboard.on('keydown-Q',   this.handleSellKey);
-    keyboard.on('keydown-N',   this.handleSkipHourKey);
-    keyboard.on('keydown-F5',  this.handleSaveKey);
-    keyboard.on('keydown-ESC', this.handleEscKey);
-    keyboard.on('keydown-I',   this.handleInvKey);
-
-    this.numberKeyHandlers.forEach((handler, index) => {
-      keyboard.on(`keydown-${GameSession.NUMBER_KEY_NAMES[index]}`, handler);
-    });
-  }
-
   private setupCamera(): void {
     this.scene.cameras.main
       .setBounds(0, 0, this.runtime.tilemap.widthInPixels, this.runtime.tilemap.heightInPixels)
@@ -215,131 +188,6 @@ export class GameSession {
     const bought = this.dialog.buyShopItem(index);
     if (bought) this.ui.notify('🛒 Đã mua!');
     else this.ui.notify('💸 Không đủ tiền!', '#e74c3c');
-  }
-
-  private handleInteract(): void {
-    if (this.dialog?.isOpen) {
-      this.dialog.advance();
-      return;
-    }
-
-    // E also closes the shop panel
-    if (this.ui.isShopPanelOpen) {
-      this.ui.closeShopPanel();
-      return;
-    }
-
-    // Tool Shop building interaction
-    if (this.runtime.toolShop.isNearPlayer(this.runtime.player.x, this.runtime.player.y)) {
-      this.ui.openShopPanel(TOOL_SHOP_CATALOG, this.runtime.inventory, 'Cửa hàng dụng cụ', '🔧');
-      return;
-    }
-
-    const nearby = this.findNearbyNpc();
-    if (nearby) {
-      // Shop NPC — open the interactive shop panel instead of DialogSystem
-      if (nearby.def.shop) {
-        this.ui.openShopPanel(nearby.def.shop, this.runtime.inventory, nearby.def.name, nearby.def.emoji);
-        return;
-      }
-      this.dialog?.open(nearby);
-      return;
-    }
-
-    const { tileX, tileY } = this.runtime.player.facingTile;
-    const zone = this.runtime.tilemap.getZone(tileX, tileY);
-
-    switch (this.currentTool) {
-      case 'hoe': {
-        if (zone !== 'farm') break;
-        // Harvest fully grown crops first
-        const harvested = this.runtime.farming.harvest(tileX, tileY);
-        if (harvested) {
-          if (this.runtime.inventory.isFull()) {
-            this.ui.notify('⚠️ Túi đồ đầy!', '#e67e22');
-            break;
-          }
-          this.runtime.inventory.add(harvested, 1);
-          this.ui.notify(`✅ Thu hoạch ${ITEMS[harvested].emoji} ${ITEMS[harvested].name}!`);
-          break;
-        }
-        // Otherwise till the soil
-        if (this.runtime.farming.till(tileX, tileY)) {
-          this.ui.notify('🌱 Đã cày đất');
-        }
-        break;
-      }
-
-      case 'wateringCan': {
-        if (zone !== 'farm') break;
-        const tile = this.runtime.farming.getTile(tileX, tileY);
-        if (!tile) break;
-
-        // On tilled soil: auto-plant first available seed (also waters automatically)
-        if (tile.state === 'tilled') {
-          const seedIds: ItemId[] = ['seed_wheat', 'seed_carrot', 'seed_tomato'];
-          const seed = seedIds.find(id => this.runtime.inventory.count(id) > 0);
-          if (seed) {
-            const cropId = this.runtime.farming.plantSeed(tileX, tileY, seed);
-            if (cropId) {
-              this.runtime.inventory.removeByIdAndQty(seed, 1);
-              this.ui.notify(`🌾 Đã gieo ${ITEMS[seed].emoji} ${ITEMS[seed].name}`);
-              break;
-            }
-          }
-          // No seeds — just water the soil
-          if (this.runtime.farming.water(tileX, tileY)) {
-            this.ui.notify('💧 Đã tưới đất');
-          }
-          break;
-        }
-
-        // On seeded soil: water to continue growth
-        if (this.runtime.farming.water(tileX, tileY)) {
-          this.ui.notify('💧 Đã tưới cây');
-        } else if (tile.watered) {
-          this.ui.notify('💧 Đã tưới rồi hôm nay');
-        }
-        break;
-      }
-
-      case 'fishingRod':
-        if (!this.runtime.fishing.isActive && zone === 'water') {
-          this.runtime.fishing.cast();
-          break;
-        }
-
-        if (this.runtime.fishing.isBiting) {
-          this.runtime.fishing.reel();
-          break;
-        }
-
-        if (this.runtime.fishing.isActive) {
-          this.runtime.fishing.cancel();
-          this.ui.notify('Đã hủy câu', '#e67e22');
-        }
-        break;
-    }
-  }
-
-  private findNearbyNpc() {
-    return this.runtime.npcs.find((npc) => npc.isNearPlayer(this.runtime.player.x, this.runtime.player.y));
-  }
-
-  private get currentTool(): ToolId {
-    const slot = this.runtime.inventory.getSlot(this.runtime.inventory.getActiveSlot());
-    if (!slot) return 'none';
-    const toolMap: Partial<Record<string, ToolId>> = {
-      tool_hoe:                   'hoe',
-      tool_wateringCan:           'wateringCan',
-      tool_fishingRod:            'fishingRod',
-      tool_fishingRod_wooden:     'fishingRod',
-      tool_fishingRod_bronze:     'fishingRod',
-      tool_fishingRod_silver:     'fishingRod',
-      tool_fishingRod_gold:       'fishingRod',
-      tool_fishingRod_legendary:  'fishingRod',
-    };
-    return toolMap[slot.item.id] ?? 'none';
   }
 
   private togglePauseMenu(): void {
