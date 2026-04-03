@@ -9,11 +9,13 @@ import { FishingSystem } from '../systems/FishingSystem';
 import { InventorySystem } from '../systems/InventorySystem';
 import { TilemapLoader } from '../systems/TilemapLoader';
 import { Boat } from '../objects/Boat';
+import { ShopBuilding } from '../objects/ShopBuilding';
 
 export interface GameRuntime {
   player: Player;
   npcs: NPC[];
   boat: Boat;
+  toolShop: ShopBuilding;
   farming: FarmingSystem;
   fishing: FishingSystem;
   tilemap: TilemapLoader;
@@ -68,11 +70,13 @@ export function createGameRuntime(scene: Phaser.Scene): GameRuntime {
   tilemap.addCollider(player);
 
   const boat = new Boat(scene);
+  const toolShop = new ShopBuilding(scene);
 
   return {
     player,
     npcs,
     boat,
+    toolShop,
     farming,
     fishing,
     tilemap,

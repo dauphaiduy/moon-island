@@ -26,7 +26,7 @@ const LAYER_CONFIG: Array<{ name: string; collides: boolean; zone?: ZoneType }> 
   { name: 'Stairs',              collides: false, zone: 'grass'  },
   { name: 'Shadows',             collides: false               },
   { name: 'Buildings',           collides: true               },
-  { name: 'Shop - Weapon',       collides: true               },
+  { name: 'Shop - Tools',       collides: true               },
   { name: 'Dungeon',             collides: true               },
   { name: 'Trees front',         collides: false               },
   { name: 'Miscs',               collides: false               },

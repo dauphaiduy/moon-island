@@ -45,15 +45,29 @@ export type ItemId =
   | 'seed_tomato'
   | 'tool_hoe'
   | 'tool_wateringCan'
-  | 'tool_fishingRod';
+  | 'tool_fishingRod'
+  | 'tool_fishingRod_wooden'
+  | 'tool_fishingRod_bronze'
+  | 'tool_fishingRod_silver'
+  | 'tool_fishingRod_gold'
+  | 'tool_fishingRod_legendary';
+
+// Item categories — add more as the game grows
+export type ItemCategory = 'seed' | 'food' | 'fish' | 'tool' | 'material';
+
+// Rarity tiers — drive drop rates, shop pricing, UI badge colours
+export type ItemRarity = 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
 
 export interface ItemDef {
-  id: ItemId;
-  name: string;       // tên tiếng Việt
-  emoji: string;      // icon hiển thị
-  maxStack: number;   // số lượng tối đa mỗi slot
-  category: 'crop' | 'fish' | 'seed' | 'tool';
-  sellPrice: number;
+  id:           ItemId;
+  name:         string;       // tên tiếng Việt
+  emoji:        string;       // icon hiển thị
+  maxStack:     number;       // số lượng tối đa mỗi slot
+  category:     ItemCategory;
+  rarity:       ItemRarity;
+  sellPrice:    number;
+  tier?:        number;       // tool upgrade level (1 = base, 2 = iron, …)
+  description?: string;       // flavor text shown in inventory tooltip
 }
 
 export interface InventorySlot {

@@ -3,6 +3,7 @@ import { SceneKey } from '../constants';
 import type { UIScene } from '../scenes/UIScene';
 import { ITEMS } from '../data/items';
 import type { ItemId } from '../types';
+import { TOOL_SHOP_CATALOG } from '../objects/ShopBuilding';
 import { bindRuntimeToUI } from './bindRuntimeToUI';
 import { createGameRuntime, type GameRuntime } from './createGameRuntime';
 import type { ToolId } from './gameTools';
@@ -76,6 +77,12 @@ export class GameSession {
       this.runtime.boat.highlightBubble(this.scene);
     } else {
       this.runtime.boat.hideBubble();
+    }
+
+    if (this.runtime.toolShop.isNearPlayer(px, py)) {
+      this.runtime.toolShop.highlightBubble(this.scene);
+    } else {
+      this.runtime.toolShop.hideBubble();
     }
 
     if (this.runtime.player.interactJustPressed) {
@@ -222,6 +229,12 @@ export class GameSession {
       return;
     }
 
+    // Tool Shop building interaction
+    if (this.runtime.toolShop.isNearPlayer(this.runtime.player.x, this.runtime.player.y)) {
+      this.ui.openShopPanel(TOOL_SHOP_CATALOG, this.runtime.inventory, 'Cửa hàng dụng cụ', '🔧');
+      return;
+    }
+
     const nearby = this.findNearbyNpc();
     if (nearby) {
       // Shop NPC — open the interactive shop panel instead of DialogSystem
@@ -317,9 +330,14 @@ export class GameSession {
     const slot = this.runtime.inventory.getSlot(this.runtime.inventory.getActiveSlot());
     if (!slot) return 'none';
     const toolMap: Partial<Record<string, ToolId>> = {
-      tool_hoe:         'hoe',
-      tool_wateringCan: 'wateringCan',
-      tool_fishingRod:  'fishingRod',
+      tool_hoe:                   'hoe',
+      tool_wateringCan:           'wateringCan',
+      tool_fishingRod:            'fishingRod',
+      tool_fishingRod_wooden:     'fishingRod',
+      tool_fishingRod_bronze:     'fishingRod',
+      tool_fishingRod_silver:     'fishingRod',
+      tool_fishingRod_gold:       'fishingRod',
+      tool_fishingRod_legendary:  'fishingRod',
     };
     return toolMap[slot.item.id] ?? 'none';
   }
