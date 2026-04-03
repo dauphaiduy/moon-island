@@ -43,13 +43,16 @@ export class UIScene extends Phaser.Scene {
   onPauseAction?: (action: PauseMenuAction) => void;
 
   // ── Inventory panel ──────────────────────────────────────────────
-  private invContainer!:  Phaser.GameObjects.Container;
-  private invSlotBgs:     Phaser.GameObjects.Rectangle[] = [];
-  private invSlotEmojis:  Phaser.GameObjects.Text[]      = [];
-  private invSlotQtys:    Phaser.GameObjects.Text[]      = [];
-  private invSlotNames:   Phaser.GameObjects.Text[]      = [];
-  private invGoldText!:   Phaser.GameObjects.Text;
-  private isInvOpen = false;
+  private invContainer!:   Phaser.GameObjects.Container;
+  private invSlotBgs:      Phaser.GameObjects.Rectangle[] = [];
+  private invSlotEmojis:   Phaser.GameObjects.Text[]      = [];
+  private invSlotQtys:     Phaser.GameObjects.Text[]      = [];
+  private invSlotNames:    Phaser.GameObjects.Text[]      = [];  // placeholder, kept for compat
+  private invGoldText!:    Phaser.GameObjects.Text;
+  private invInfoText!:    Phaser.GameObjects.Text;
+  private isInvOpen        = false;
+  private _inventoryRef:   InventorySystem | null = null;
+  private invSelectedSlot: number | null = null;
 
   constructor() {
     super({ key: SceneKey.UI });
@@ -206,6 +209,7 @@ export class UIScene extends Phaser.Scene {
   }
 
   toggleInventoryPanel(inventory: InventorySystem): void {
+    this._inventoryRef = inventory;
     if (this.isInvOpen) {
       this.closeInventoryPanel();
     } else {
@@ -224,6 +228,7 @@ export class UIScene extends Phaser.Scene {
   closeInventoryPanel(): void {
     if (!this.isInvOpen) return;
     this.isInvOpen = false;
+    this.invSelectedSlot = null;
     this.tweens.add({
       targets: this.invContainer,
       alpha: 0,
@@ -235,20 +240,24 @@ export class UIScene extends Phaser.Scene {
   refreshInventoryPanel(inventory: InventorySystem): void {
     const slots = inventory.getAllSlots();
     for (let i = 0; i < slots.length; i++) {
-      const slot = slots[i];
+      const slot   = slots[i];
+      const isSel  = this.invSelectedSlot === i;
       if (slot) {
         this.invSlotEmojis[i].setText(slot.item.emoji);
         this.invSlotQtys[i].setText(slot.qty > 1 ? `x${slot.qty}` : '');
-        this.invSlotNames[i].setText(slot.item.name);
-        this.invSlotBgs[i].setFillStyle(0x1a3a1a, 0.85).setStrokeStyle(1.5, 0x4a9a3a, 0.8);
+        this.invSlotBgs[i]
+          .setFillStyle(isSel ? 0x2a4a1a : 0x1a3a1a, isSel ? 0.95 : 0.85)
+          .setStrokeStyle(isSel ? 2.5 : 1.5, isSel ? 0xffee00 : 0x4a9a3a, 1);
       } else {
         this.invSlotEmojis[i].setText('');
         this.invSlotQtys[i].setText('');
-        this.invSlotNames[i].setText('');
-        this.invSlotBgs[i].setFillStyle(0x0a1a0a, 0.7).setStrokeStyle(1, 0x334433, 0.5);
+        this.invSlotBgs[i]
+          .setFillStyle(isSel ? 0x1a2a0a : 0x0a1a0a, isSel ? 0.85 : 0.7)
+          .setStrokeStyle(isSel ? 2.5 : 1, isSel ? 0xffee00 : 0x334433, isSel ? 1 : 0.5);
       }
     }
     this.invGoldText.setText(`💰 ${inventory.gold.toLocaleString()} G`);
+    this.invInfoText?.setText('');
   }
 
   togglePauseMenu(): void {
@@ -344,49 +353,104 @@ export class UIScene extends Phaser.Scene {
   }
 
   private buildInventoryPanel(W: number, H: number): void {
-    const TOTAL = INV_COLS * INV_ROWS;
-    const GRID_W = INV_COLS * (SLOT_SIZE + SLOT_GAP) - SLOT_GAP;
-    const GRID_H = INV_ROWS * (SLOT_SIZE + SLOT_GAP) - SLOT_GAP;
-    const BOX_PAD = 20;
-    const BOX_W = GRID_W + BOX_PAD * 2;
-    const BOX_H = GRID_H + 90;  // room for title + gold
+    const TOTAL  = INV_COLS * INV_ROWS;  // 24
+    const STEP   = SLOT_SIZE + SLOT_GAP;  // 50
+    const GRID_W = INV_COLS * STEP - SLOT_GAP;  // 394
+    const BOX_W  = GRID_W + 40;   // 434
+    const BOX_H  = 316;
     const CX = W / 2;
     const CY = H / 2;
+    const BT = CY - BOX_H / 2;   // absolute box top
+    const originX = CX - GRID_W / 2;
+
+    // ── Absolute Y anchors ──────────────────────────────────────────
+    const y_title   = BT + 22;
+    const y_hbLbl   = BT + 46;
+    const y_hbSep   = BT + 65;
+    const y_hbRow   = BT + 74;   // hotbar slot origin
+    const y_midSep  = BT + 128;  // y_hbRow + 44 + 10
+    const y_bpLbl   = BT + 140;
+    const y_bpRow0  = BT + 159;  // backpack row 0
+    const y_bpRow1  = y_bpRow0 + STEP;  // backpack row 1
+    const y_info    = y_bpRow1 + SLOT_SIZE + 12;
+    const y_gold    = y_info + 18;
+    const y_hint    = y_gold + 18;
 
     const overlay = this.add.rectangle(0, 0, W, H, 0x000000, 0.5).setOrigin(0);
     const box = this.add.rectangle(CX, CY, BOX_W, BOX_H, 0x0d1f0d, 0.96)
       .setStrokeStyle(2, 0x4a9a3a, 1);
 
-    const title = this.add.text(CX, CY - BOX_H / 2 + 18, '🎒 TúI ĐỒ', {
+    const title = this.add.text(CX, y_title, '🎒 TÚI ĐỒ', {
       fontSize: '16px', color: '#ffe066', fontStyle: 'bold',
       stroke: '#000000', strokeThickness: 3,
     }).setOrigin(0.5);
 
-    const hint = this.add.text(CX, CY + BOX_H / 2 - 12, 'I / ESC: đóng', {
-      fontSize: '10px', color: '#ffffff44',
-    }).setOrigin(0.5);
+    // ── Hotbar section ──────────────────────────────────────────────
+    const hbLabel = this.add.text(originX, y_hbLbl,
+      '🖥  Thanh hiển thị  (hiện trên màn hình)', {
+        fontSize: '10px', color: '#aaffaa',
+      });
+    const hbSep = this.add.rectangle(CX, y_hbSep, GRID_W, 1, 0x4a9a3a, 0.6);
+    // subtle tinted backdrop behind hotbar row
+    const hbBg = this.add.rectangle(originX - 4, y_hbRow - 4,
+      GRID_W + 8, SLOT_SIZE + 8, 0x0a2a10, 0.35).setOrigin(0);
 
-    this.invGoldText = this.add.text(CX, CY + BOX_H / 2 - 30, '💰 0 G', {
-      fontSize: '13px', color: '#ffe066',
+    // ── Backpack section ────────────────────────────────────────────
+    const midSep = this.add.rectangle(CX, y_midSep, GRID_W, 1, 0x334433, 0.5);
+    const bpLabel = this.add.text(originX, y_bpLbl, '🎒  Ba lô  (không hiện trên màn hình)', {
+      fontSize: '10px', color: '#88cc88',
+    });
+
+    // ── Footer ──────────────────────────────────────────────────────
+    this.invInfoText = this.add.text(CX, y_info, '', {
+      fontSize: '12px', color: '#ffe066',
       stroke: '#000000', strokeThickness: 2,
     }).setOrigin(0.5);
+    this.invGoldText = this.add.text(CX, y_gold, '💰 0 G', {
+      fontSize: '12px', color: '#ffe066',
+      stroke: '#000000', strokeThickness: 2,
+    }).setOrigin(0.5);
+    const hint = this.add.text(CX, y_hint,
+      'Click chọn  →  Click đích để di chuyển   |   I / ESC: đóng', {
+        fontSize: '9px', color: '#ffffff44',
+      }).setOrigin(0.5);
 
+    // ── Slot grid ───────────────────────────────────────────────────
     const gridObjs: Phaser.GameObjects.GameObject[] = [];
-    const originX = CX - GRID_W / 2;
-    const originY = CY - GRID_H / 2 - 4;
 
     for (let i = 0; i < TOTAL; i++) {
-      const col = i % INV_COLS;
-      const row = Math.floor(i / INV_COLS);
-      const sx = originX + col * (SLOT_SIZE + SLOT_GAP);
-      const sy = originY + row * (SLOT_SIZE + SLOT_GAP);
+      const col     = i % INV_COLS;
+      const section = Math.floor(i / INV_COLS);  // 0=hotbar 1=bp0 2=bp1
+      const sx = originX + col * STEP;
+      const sy = section === 0 ? y_hbRow : (section === 1 ? y_bpRow0 : y_bpRow1);
 
       const bg = this.add.rectangle(sx, sy, SLOT_SIZE, SLOT_SIZE, 0x0a1a0a, 0.7)
-        .setOrigin(0).setStrokeStyle(1, 0x334433, 0.5);
+        .setOrigin(0)
+        .setStrokeStyle(1, 0x334433, 0.5)
+        .setInteractive()
+        .on('pointerdown', () => this.handleInvSlotClick(i))
+        .on('pointerover', () => {
+          const slot = this._inventoryRef?.getSlot(i);
+          if (slot) {
+            this.invInfoText.setText(
+              `${slot.item.emoji} ${slot.item.name}  •  Giá bán: ${slot.item.sellPrice}G  •  Số lượng: ${slot.qty}`,
+            );
+          }
+          if (this.invSelectedSlot !== i) {
+            bg.setStrokeStyle(1.5, 0x88cc88, 1);
+          }
+        })
+        .on('pointerout', () => {
+          if (this.invInfoText) this.invInfoText.setText('');
+          if (this.invSelectedSlot !== i) {
+            const hasItem = !!this._inventoryRef?.getSlot(i);
+            bg.setStrokeStyle(hasItem ? 1.5 : 1, hasItem ? 0x4a9a3a : 0x334433, hasItem ? 0.8 : 0.5);
+          }
+        });
       this.invSlotBgs.push(bg);
 
-      const emoji = this.add.text(sx + SLOT_SIZE / 2, sy + SLOT_SIZE / 2 - 4, '', {
-        fontSize: '20px',
+      const emoji = this.add.text(sx + SLOT_SIZE / 2, sy + SLOT_SIZE / 2, '', {
+        fontSize: '22px',
       }).setOrigin(0.5);
       this.invSlotEmojis.push(emoji);
 
@@ -396,19 +460,44 @@ export class UIScene extends Phaser.Scene {
       }).setOrigin(1, 1);
       this.invSlotQtys.push(qty);
 
-      const name = this.add.text(sx + SLOT_SIZE / 2, sy + SLOT_SIZE - 9, '', {
-        fontSize: '8px', color: '#ccffcc',
-      }).setOrigin(0.5, 0);
+      // placeholder — not rendered (invInfoText used instead)
+      const name = this.add.text(0, -9999, '', { fontSize: '8px' });
       this.invSlotNames.push(name);
 
       gridObjs.push(bg, emoji, qty, name);
     }
 
     this.invContainer = this.add.container(0, 0, [
-      overlay, box, title, hint, this.invGoldText, ...gridObjs,
+      overlay, box, title,
+      hbLabel, hbSep, hbBg,
+      midSep, bpLabel,
+      this.invInfoText, this.invGoldText, hint,
+      ...gridObjs,
     ]);
     this.invContainer.setVisible(false);
-    this.invContainer.setDepth(90);  // below pause menu (100) but above game
+    this.invContainer.setDepth(90);
+  }
+
+  private handleInvSlotClick(i: number): void {
+    const inv = this._inventoryRef;
+    if (!inv) return;
+
+    if (this.invSelectedSlot === null) {
+      // Only allow picking up a slot that has an item
+      if (inv.getSlot(i)) {
+        this.invSelectedSlot = i;
+        this.refreshInventoryPanel(inv);
+      }
+    } else if (this.invSelectedSlot === i) {
+      // Click same slot again → deselect
+      this.invSelectedSlot = null;
+      this.refreshInventoryPanel(inv);
+    } else {
+      // Swap the two slots (works for empty destination too)
+      inv.swapSlots(this.invSelectedSlot, i);
+      this.invSelectedSlot = null;
+      this.refreshInventoryPanel(inv);
+    }
   }
 
   private buildConfirmDialog(W: number, H: number): void {

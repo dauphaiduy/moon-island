@@ -132,6 +132,14 @@ export class InventorySystem {
     return true;
   }
 
+  /** Swap two slots (used by the inventory panel UI) */
+  swapSlots(a: number, b: number): void {
+    const tmp = this.slots[a];
+    this.slots[a] = this.slots[b];
+    this.slots[b] = tmp;
+    this.onChange?.();
+  }
+
   /** Restore inventory state from a save file */
   loadState(slots: ({ id: ItemId; qty: number } | null)[], gold: number): void {
     this.slots = Array(InventorySystem.MAX_SLOTS).fill(null);
