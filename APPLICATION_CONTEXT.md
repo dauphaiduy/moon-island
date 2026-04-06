@@ -2,81 +2,196 @@
 
 ## Overview
 
-This project is a small 2D farming and fishing game built with Phaser 3 and TypeScript, bundled with Vite.
+A 2D life-sim / farming game built with **Phaser 3 + TypeScript + Vite**, packaged as an Electron desktop app.
+The world contains a village with farming, fishing, NPC interaction, and a shop — plus a dungeon (currently closed for rework).
 
-## Architecture Update
-
-The codebase has been restructured so future features can be added without continuing to grow a single orchestration scene.
-
-Current scaling direction:
-
-- Phaser boot configuration now lives in `src/game/createGameConfig.ts`
-- main gameplay composition lives in `src/game/GameSession.ts`
-- runtime construction lives in `src/game/createGameRuntime.ts`
-- UI binding logic lives in `src/game/bindRuntimeToUI.ts`
-- tool metadata lives in `src/game/gameTools.ts`
-
-This keeps `GameScene` focused on scene lifecycle only, while gameplay wiring is handled in dedicated modules.
-
-The current gameplay loop is centered on:
-
-- moving a player around a tilemap world
-- switching tools with `Tab`
-- interacting with nearby tiles using `E`
-- farming on `farm` zones
-- fishing on `water` zones
-
-The application is already structured into scenes, gameplay systems, and reusable constants/types, which makes it a good base for extending into a fuller life-sim or top-down adventure game.
+---
 
 ## Runtime Stack
 
-- Engine: Phaser `3.90.0`
-- Language: TypeScript `~5.9.3`
-- Bundler/dev server: Vite `^8.0.1`
-- Physics: Phaser Arcade Physics
-- Rendering style: pixel-art friendly with `pixelArt: true` and `roundPixels: true`
+| Tool | Version |
+|---|---|
+| Phaser | `3.90.0` |
+| TypeScript | `~5.9.3` |
+| Vite | `^8.0.1` |
+| Electron | latest |
+| Physics | Arcade Physics |
+| Pixel art | `pixelArt: true`, `roundPixels: true` |
 
-The game is started from [src/main.ts](/home/khanhduy/local/2d/my-phaser-game/src/main.ts) and mounted by [index.html](/home/khanhduy/local/2d/my-phaser-game/index.html).
+---
 
-## High-Level Flow
+## Folder Structure
 
-The application boot sequence is:
+```
+src/
+  main.ts                    # Phaser bootstrap
+  style.css
+  constants/index.ts          # SceneKey, TextureKey, MapKey, TILE_SIZE, game constants
+  types/index.ts              # Shared interfaces: Direction, FarmTile, FishingState, ItemId, ItemDef, ...
+  types/npc.ts                # NPC types, ShopItem
 
-1. Vite loads [index.html](/home/khanhduy/local/2d/my-phaser-game/index.html).
-2. The browser imports [src/main.ts](/home/khanhduy/local/2d/my-phaser-game/src/main.ts).
-3. Phaser is initialized with four scenes in this order:
-   - `PreloadScene`
-   - `MenuScene`
-   - `GameScene`
-   - `UIScene`
-4. `PreloadScene` loads the tilemap, tileset image, and player spritesheet.
-5. `MenuScene` shows the title screen and starts the game on click.
-6. `GameScene` creates a `GameSession`, which builds the runtime, attaches input, and launches the UI overlay scene.
-7. `UIScene` renders persistent HUD and notifications on top of gameplay.
+  scenes/                    # App-level scenes (used by both village and dungeon)
+    PreloadScene.ts
+    MenuScene.ts
+    UIScene.ts                # Persistent HUD overlay (hotbar, clock, gold, XP bar, notification, panels)
 
-## Scene Responsibilities
+  common/                    # Shared between village and dungeon
+    createGameConfig.ts       # Phaser.Types.Core.GameConfig factory
+    objects/Player.ts         # Player container: physics, walk/idle/farming animations, playAction/stopFishing
+    data/items.ts             # ITEMS registry (ItemDef per ItemId), FISH_NAME_MAP
+    systems/InventorySystem.ts
+    systems/SaveSystem.ts     # Save/load via Electron IPC or localStorage fallback
+    systems/XPSystem.ts       # Level 1–20, quadratic XP, onXPChange/onLevelUp callbacks
+    ui/PauseMenuPanel.ts
+    ui/InventoryPanel.ts
+    ui/ConfirmDialog.ts
 
-### Preload Scene
+  village/
+    scenes/GameScene.ts       # Scene lifecycle: creates GameSession, delegates update
+    game/GameSession.ts       # Orchestrator: runtime + input + UI + save/load + hotkey wiring
+    game/createGameRuntime.ts # Factory: builds all systems and objects → GameRuntime interface
+    game/bindRuntimeToUI.ts   # Wires runtime callbacks → UIScene (fishing, day/night, inventory)
+    game/InteractionHandler.ts# All E-key logic: dialog, shop, NPC, farming/fishing tile actions
+    game/InputController.ts   # Keyboard bindings (Tab, E, S, F5, Esc, Ins, 1–9)
+    game/gameTools.ts         # ToolId type, tool metadata, inventory-slot → tool mapping
+    objects/NPC.ts
+    objects/Boat.ts
+    objects/ShopBuilding.ts
+    objects/DungeonEntrance.ts
+    systems/FarmingSystem.ts  # Till / plant / water / harvest; visual tile rendering
+    systems/FishingSystem.ts  # Cast → wait → bite → reel/miss state machine
+    systems/DayNightSystem.ts # In-game clock, time-of-day tint, new-day callback
+    systems/TilemapLoader.ts  # Loads map.json + world.json, zone grid, colliders
+    systems/DialogSystem.ts   # NPC conversation + quest progression
+    ui/ShopPanel.ts
+    data/npcs.ts              # NPC definitions (name, dialogue, shop catalog, friendship)
 
-Defined in [src/scenes/PreloadScene.ts](/home/khanhduy/local/2d/my-phaser-game/src/scenes/PreloadScene.ts).
+  dungeon/                   # Dungeon map — temporarily closed
+    scenes/DungeonScene.ts   # Own Player + camera zoom=2, zone grid, TreasurePanel interaction
+    systems/DungeonLoot.ts   # Static loot-buffer (awarded items carried back to village)
+    ui/TreasurePanel.ts      # Chest loot popup (individual setScrollFactor — no Container)
+```
 
-Responsibilities:
+---
 
-- preload map data through `TilemapLoader.preload(this)`
-- load `assets/player.png` as a spritesheet
-- display a simple loading bar
-- transition to the menu scene when loading completes
+## Boot Sequence
 
-Important note:
+1. `src/main.ts` → `createGameConfig()` → `new Phaser.Game(config)`
+2. Phaser starts scenes in order: `PreloadScene → MenuScene → GameScene + UIScene`
+3. `PreloadScene` loads: village tilemap, dungeon tilemap, player spritesheet (`sprite_128x128.png`), farming spritesheets (`right_sprite_farming.png` / `left_sprite_farming.png`), NPC spritesheet
+4. `MenuScene` shows title screen; click → `GameScene`
+5. `GameScene.create()` → `new GameSession(scene).create()`
+   - Builds `GameRuntime` (all systems + objects)
+   - Launches `UIScene` as a parallel overlay
+   - Creates `InteractionHandler` + `InputController`
+   - Calls `bindRuntimeToUI()` to wire callbacks
+6. `UIScene` runs on top of gameplay at all times, never stopped
 
-- The code expects `public/assets/player.png` to exist.
-- The current `Player` implementation consumes the spritesheet directly for idle and walk animations.
+---
 
-### Menu Scene
+## Key Systems
 
-Defined in [src/scenes/MenuScene.ts](/home/khanhduy/local/2d/my-phaser-game/src/scenes/MenuScene.ts).
+### Player (`common/objects/Player.ts`)
+- `Container` with an inner `Sprite`
+- Walk animations: `walk-{down|left|right|up}` from `TextureKey.Player`
+- Idle animations: `idle-{down|left|right|up}`
+- **Farming animations**: `farm-{hoe|water|plant|fishing}-{left|right}`
+  - Right sprite: frames play in natural order (col 0→3)
+  - Left sprite: frames play reversed (col 3→0) — horizontally flipped source image
+- `playAction(action)` — one-shot farming anim; blocks walk during action
+- `stopFishing()` — releases fishing hold pose, returns to idle
 
-Responsibilities:
+### XP System (`common/systems/XPSystem.ts`)
+- Levels 1–20, quadratic scaling: `xpForStep(l) = floor(100 × l^1.4)`
+- XP is stored in `ItemDef.xp` for crops and fish (not a separate table)
+  - Crops: wheat=8, carrot=12, tomato=20
+  - Fish: carp=15, bass=25, catfish=28, rare=60
+  - Dungeon loot: 30 XP per item (`XP_GRANTS.DUNGEON_LOOT`)
+- `onXPChange` callback → `UIScene.setXP()` refreshes HUD bar
+- `onLevelUp` callback → `UIScene.notify()` shows level-up toast
+- Persisted in save: `xp` + `level` fields (backward-compat `?? 0 / ?? 1`)
+
+### Farming (`village/systems/FarmingSystem.ts`)
+- Tool: `hoe` → till / harvest
+- Tool: `wateringCan` → auto-plant from inventory if tilled with no seed; otherwise water
+- Crops: wheat, carrot, tomato (3 growth stages, requires daily watering)
+- XP granted on harvest only (till/plant/water grant none)
+
+### Fishing (`village/systems/FishingSystem.ts`)
+- `cast()` → wait → fish bites (random delay) → `reel()` within window or miss
+- Player animation freezes on last fishing frame until `onCatch` or `onMiss` fires
+- Fish names resolved to `ItemId` via `FISH_NAME_MAP` for XP + inventory lookup
+
+### Day/Night (`village/systems/DayNightSystem.ts`)
+- In-game time: 1 real second = 1 game minute; day = 1440 minutes
+- `TimeOfDay`: dawn / morning / noon / afternoon / dusk / night
+- Tint overlay driven by `DayNightSystem.onTimeChange` → `overlay.setFillStyle(tint, alpha)`
+- `onNewDay` → reset crop watering + NPC daily flags + `notify`
+
+### Save System (`common/systems/SaveSystem.ts`)
+- `SaveData` includes: version, day, minute, playerX/Y, toolIndex, gold, xp, level, slots, farmTiles, npcFriendship, completedQuests
+- Electron: uses `window.electronAPI.save/load`; falls back to `localStorage`
+- `SaveSystem.apply(data, runtime)` silently restores all state (no callbacks fired)
+
+### Inventory (`common/systems/InventorySystem.ts`)
+- 8-slot hotbar, stackable items up to `ItemDef.maxStack`
+- `addFish(name)` resolves fish display name → ItemId via `FISH_NAME_MAP`
+- `gold` tracked separately; `adjustGold(delta)` for purchases
+
+### Dungeon (`dungeon/` — temporarily closed)
+- `DungeonEntrance.isNearPlayer()` currently shows "🚧 tạm đóng cửa" notification
+- Original entry code is commented out in `InteractionHandler.ts` with `// TODO: re-enable when DungeonScene is ready`
+- `DungeonScene`: uses its own local `Player`, camera zoom=2, zone grid
+- `TreasurePanel`: each game object has `.setScrollFactor(0)` individually (Container does not propagate scroll factor in Phaser 3)
+
+---
+
+## UIScene HUD Layout
+
+| Element | Position | Updates via |
+|---|---|---|
+| Tool indicator | top-left | `setTool(name)` |
+| Clock | top-center | `setClock(state)` |
+| Day label | top-center below clock | `setClock(state)` |
+| Gold | top-right | `setGold(amount)` |
+| Level badge `⭐ Lv. N` | top-right below gold | `setXP(...)` |
+| XP bar (88px) | top-right | `setXP(...)` |
+| XP hint text | top-right | `setXP(...)` |
+| Fishing prompt | center-screen | `setFishingPrompt(msg)` |
+| Notification toast | center-screen | `notify(msg, color?)` |
+| Hotbar (8 slots) | bottom-center | `refreshHotbar(inventory)` |
+
+**Panels** (toggle over HUD): `PauseMenuPanel`, `InventoryPanel`, `ShopPanel`, `ConfirmDialog`
+
+---
+
+## Items Registry (`common/data/items.ts`)
+
+`ItemDef` fields: `id, name, emoji, maxStack, category, rarity, sellPrice, tier?, xp?, description?`
+
+| Category | Examples |
+|---|---|
+| `food` | crop_wheat (8xp), crop_carrot (12xp), crop_tomato (20xp) |
+| `fish` | fish_carp (15xp), fish_bass (25xp), fish_catfish (28xp), fish_rare (60xp) |
+| `seed` | seed_wheat, seed_carrot, seed_tomato |
+| `tool` | tool_hoe, tool_wateringCan, tool_fishingRod (tiers 1–6) |
+| `weapon` | weapon_sword_wood → weapon_sword_legendary (tiers 1–5, dungeon) |
+
+---
+
+## Asset Files (`public/assets/`)
+
+| File | Used for |
+|---|---|
+| `sprite_128x128.png` | Player walk/idle (4×4 frames, 32×32px) |
+| `right_sprite_farming.png` | Farming/fishing animations facing right (4×4 frames) |
+| `left_sprite_farming.png` | Same as right, horizontally flipped; frames played in reverse |
+| `player.png` | NPC spritesheet |
+| `maps/map.json` | Village Tiled map |
+| `maps/world.json` | Tiled world file linking multiple maps |
+| `maps/dun.json` | Dungeon Tiled map (16px tiles, displayed at ×2 scale) |
+| `tilesets/` | Tileset PNG files |
+
 
 - render a simple title screen
 - show control hints
