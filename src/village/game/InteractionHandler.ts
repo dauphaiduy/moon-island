@@ -1,12 +1,11 @@
-import type { ItemId } from '../../types';
-import { ITEMS } from '../../common/data/items';
-import { TOOL_SHOP_CATALOG } from '../objects/ShopBuilding';
-import type { GameRuntime } from './createGameRuntime';
-import type { UIScene } from '../../scenes/UIScene';
-import type { DialogSystem } from '../systems/DialogSystem';
-import type { ToolId } from './gameTools';
-import { STAMINA_COSTS } from '../../common/systems/PlayerStatsSystem';
-
+import type { ItemId } from "../../types";
+import { ITEMS } from "../../common/data/items";
+import { TOOL_SHOP_CATALOG } from "../objects/ShopBuilding";
+import type { GameRuntime } from "./createGameRuntime";
+import type { UIScene } from "../../scenes/UIScene";
+import type { DialogSystem } from "../systems/DialogSystem";
+import type { ToolId } from "./gameTools";
+import { STAMINA_COSTS } from "../../common/systems/PlayerStatsSystem";
 
 /**
  * Handles all E-key interaction logic: dialog, shop, NPC, and tile-tool actions.
@@ -20,7 +19,7 @@ export class InteractionHandler {
 
   constructor(runtime: GameRuntime, ui: UIScene) {
     this.runtime = runtime;
-    this.ui      = ui;
+    this.ui = ui;
   }
 
   setDialog(dialog: DialogSystem): void {
@@ -57,31 +56,61 @@ export class InteractionHandler {
     //   );
     //   return;
     // }
-    if (this.runtime.dungeonEntrance.isNearPlayer(this.runtime.player.x, this.runtime.player.y)) {
-      this.ui.notify('🚧 Hầm Ngục đang tạm đóng cửa!', '#ff8844');
+    if (
+      this.runtime.dungeonEntrance.isNearPlayer(
+        this.runtime.player.x,
+        this.runtime.player.y,
+      )
+    ) {
+      this.ui.notify("🚧 Hầm Ngục đang tạm đóng cửa!", "#ff8844");
       return;
     }
 
     // ── Shop building ──────────────────────────────────────────────────────────
-    if (this.runtime.toolShop.isNearPlayer(this.runtime.player.x, this.runtime.player.y)) {
-      this.ui.openShopPanel(TOOL_SHOP_CATALOG, this.runtime.inventory, 'Cửa hàng dụng cụ', '🔧');
+    if (
+      this.runtime.toolShop.isNearPlayer(
+        this.runtime.player.x,
+        this.runtime.player.y,
+      )
+    ) {
+      this.ui.openShopPanel(
+        TOOL_SHOP_CATALOG,
+        this.runtime.inventory,
+        "Cửa hàng dụng cụ",
+        "🔧",
+      );
       return;
     }
 
     // ── Tent — sleep to next day ───────────────────────────────────────────────
-    if (this.runtime.tent.isNearPlayer(this.runtime.player.x, this.runtime.player.y)) {
-      const nextDay = this.runtime.dayNight.state.day + 1;
-      this.runtime.dayNight.sleepToNextDay();
-      this.runtime.stats.restoreStamina();
-      this.ui.notify(`😴 Ngủ ngon... Ngày ${nextDay} bắt đầu lúc 06:00!`, '#c8e6ff');
-      return;
+    if (
+      this.runtime.tent.isNearPlayer(
+        this.runtime.player.x,
+        this.runtime.player.y,
+      )
+    ) {
+      this.ui.openConfirm("Bạn có muốn ngủ đến ngày mai không?", () => {
+        const nextDay = this.runtime.dayNight.state.day + 1;
+        this.runtime.dayNight.sleepToNextDay();
+        this.runtime.stats.restoreStamina();
+        this.ui.notify(
+          `😴 Ngủ ngon... Ngày ${nextDay} bắt đầu lúc 06:00!`,
+          "#c8e6ff",
+        );
+        return;
+      });
     }
 
     // ── NPC interaction ────────────────────────────────────────────────────────
     const nearby = this.findNearbyNpc();
     if (nearby) {
       if (nearby.def.shop) {
-        this.ui.openShopPanel(nearby.def.shop, this.runtime.inventory, nearby.def.name, nearby.def.emoji);
+        this.ui.openShopPanel(
+          nearby.def.shop,
+          this.runtime.inventory,
+          nearby.def.name,
+          nearby.def.emoji,
+        );
         return;
       }
       this.dialog?.open(nearby);
@@ -93,72 +122,82 @@ export class InteractionHandler {
     const zone = this.runtime.tilemap.getZone(tileX, tileY);
 
     switch (this.currentTool) {
-      case 'hoe': {
-        if (zone !== 'farm') break;
+      case "hoe": {
+        if (zone !== "farm") break;
         const hoeTile = this.runtime.farming.getTile(tileX, tileY);
 
-        if (hoeTile?.state === 'grown') {
+        if (hoeTile?.state === "grown") {
           // ── Harvest ──────────────────────────────────────────────────────
           if (this.runtime.inventory.isFull()) {
-            this.ui.notify('⚠️ Túi đồ đầy!', '#e67e22');
+            this.ui.notify("⚠️ Túi đồ đầy!", "#e67e22");
             break;
           }
           if (!this.runtime.stats.useStamina(STAMINA_COSTS.harvest)) {
-            this.ui.notify('⚠️ Hết thể lực!', '#e74c3c');
+            this.ui.notify("⚠️ Hết thể lực!", "#e74c3c");
             break;
           }
           const harvested = this.runtime.farming.harvest(tileX, tileY);
           if (harvested) {
-            this.runtime.player.playAction('hoe');
+            this.runtime.player.playAction("hoe");
             this.runtime.inventory.add(harvested, 1);
             this.runtime.xp.add(ITEMS[harvested].xp ?? 10);
-            this.ui.notify(`✅ Thu hoạch ${ITEMS[harvested].emoji} ${ITEMS[harvested].name}!`);
+            this.ui.notify(
+              `✅ Thu hoạch ${ITEMS[harvested].emoji} ${ITEMS[harvested].name}!`,
+            );
           }
         } else if (!hoeTile) {
           // ── Till raw farm soil ────────────────────────────────────────────
           if (!this.runtime.stats.useStamina(STAMINA_COSTS.hoe)) {
-            this.ui.notify('⚠️ Hết thể lực!', '#e74c3c');
+            this.ui.notify("⚠️ Hết thể lực!", "#e74c3c");
             break;
           }
           if (this.runtime.farming.till(tileX, tileY)) {
-            this.runtime.player.playAction('hoe');
-            this.ui.notify('🌱 Đã cày đất');
+            this.runtime.player.playAction("hoe");
+            this.ui.notify("🌱 Đã cày đất");
           }
         }
         break;
       }
 
-      case 'wateringCan': {
-        if (zone !== 'farm') break;
+      case "wateringCan": {
+        if (zone !== "farm") break;
         const tile = this.runtime.farming.getTile(tileX, tileY);
         if (!tile) break;
 
         // On tilled soil: auto-plant first available seed (also waters automatically)
-        if (tile.state === 'tilled') {
-          const seedIds: ItemId[] = ['seed_wheat', 'seed_carrot', 'seed_tomato'];
-          const seed = seedIds.find(id => this.runtime.inventory.count(id) > 0);
+        if (tile.state === "tilled") {
+          const seedIds: ItemId[] = [
+            "seed_wheat",
+            "seed_carrot",
+            "seed_tomato",
+          ];
+          const seed = seedIds.find(
+            (id) => this.runtime.inventory.count(id) > 0,
+          );
           if (seed) {
             if (!this.runtime.stats.useStamina(STAMINA_COSTS.plant)) {
-              this.ui.notify('⚠️ Hết thể lực!', '#e74c3c');
+              this.ui.notify("⚠️ Hết thể lực!", "#e74c3c");
               break;
             }
             const cropId = this.runtime.farming.plantSeed(tileX, tileY, seed);
             if (cropId) {
-              this.runtime.player.playAction('plant');
+              this.runtime.player.playAction("plant");
               this.runtime.inventory.removeByIdAndQty(seed, 1);
-              this.ui.notify(`🌾 Đã gieo ${ITEMS[seed].emoji} ${ITEMS[seed].name}`);
+              this.ui.notify(
+                `🌾 Đã gieo ${ITEMS[seed].emoji} ${ITEMS[seed].name}`,
+              );
               break;
             }
           }
           // No seeds — just water the soil
           if (!tile.watered) {
             if (!this.runtime.stats.useStamina(STAMINA_COSTS.water)) {
-              this.ui.notify('⚠️ Hết thể lực!', '#e74c3c');
+              this.ui.notify("⚠️ Hết thể lực!", "#e74c3c");
               break;
             }
             if (this.runtime.farming.water(tileX, tileY)) {
-              this.runtime.player.playAction('water');
-              this.ui.notify('💧 Đã tưới đất');
+              this.runtime.player.playAction("water");
+              this.ui.notify("💧 Đã tưới đất");
             }
           }
           break;
@@ -166,27 +205,27 @@ export class InteractionHandler {
 
         // On seeded soil: water to continue growth
         if (tile.watered) {
-          this.ui.notify('💧 Đã tưới rồi hôm nay');
+          this.ui.notify("💧 Đã tưới rồi hôm nay");
           break;
         }
         if (!this.runtime.stats.useStamina(STAMINA_COSTS.water)) {
-          this.ui.notify('⚠️ Hết thể lực!', '#e74c3c');
+          this.ui.notify("⚠️ Hết thể lực!", "#e74c3c");
           break;
         }
         if (this.runtime.farming.water(tileX, tileY)) {
-          this.runtime.player.playAction('water');
-          this.ui.notify('💧 Đã tưới cây');
+          this.runtime.player.playAction("water");
+          this.ui.notify("💧 Đã tưới cây");
         }
         break;
       }
 
-      case 'fishingRod':
-        if (!this.runtime.fishing.isActive && zone === 'water') {
+      case "fishingRod":
+        if (!this.runtime.fishing.isActive && zone === "water") {
           if (!this.runtime.stats.useStamina(STAMINA_COSTS.fishing)) {
-            this.ui.notify('⚠️ Hết thể lực!', '#e74c3c');
+            this.ui.notify("⚠️ Hết thể lực!", "#e74c3c");
             break;
           }
-          this.runtime.player.playAction('fishing');
+          this.runtime.player.playAction("fishing");
           this.runtime.fishing.cast();
           break;
         }
@@ -197,7 +236,7 @@ export class InteractionHandler {
         if (this.runtime.fishing.isActive) {
           this.runtime.fishing.cancel();
           this.runtime.player.stopFishing();
-          this.ui.notify('Đã hủy câu', '#e67e22');
+          this.ui.notify("Đã hủy câu", "#e67e22");
         }
         break;
     }
@@ -212,18 +251,20 @@ export class InteractionHandler {
   }
 
   private get currentTool(): ToolId {
-    const slot = this.runtime.inventory.getSlot(this.runtime.inventory.getActiveSlot());
-    if (!slot) return 'none';
+    const slot = this.runtime.inventory.getSlot(
+      this.runtime.inventory.getActiveSlot(),
+    );
+    if (!slot) return "none";
     const toolMap: Partial<Record<string, ToolId>> = {
-      tool_hoe:                  'hoe',
-      tool_wateringCan:          'wateringCan',
-      tool_fishingRod:           'fishingRod',
-      tool_fishingRod_wooden:    'fishingRod',
-      tool_fishingRod_bronze:    'fishingRod',
-      tool_fishingRod_silver:    'fishingRod',
-      tool_fishingRod_gold:      'fishingRod',
-      tool_fishingRod_legendary: 'fishingRod',
+      tool_hoe: "hoe",
+      tool_wateringCan: "wateringCan",
+      tool_fishingRod: "fishingRod",
+      tool_fishingRod_wooden: "fishingRod",
+      tool_fishingRod_bronze: "fishingRod",
+      tool_fishingRod_silver: "fishingRod",
+      tool_fishingRod_gold: "fishingRod",
+      tool_fishingRod_legendary: "fishingRod",
     };
-    return toolMap[slot.item.id] ?? 'none';
+    return toolMap[slot.item.id] ?? "none";
   }
 }

@@ -9,7 +9,7 @@ import { TILE_SIZE } from '../../constants';
 export const TENT_TILE_X = 10;
 export const TENT_TILE_Y = 3;
 
-const INTERACT_DIST = TILE_SIZE * 2.5;
+const INTERACT_DIST = TILE_SIZE * 1.5;
 
 /**
  * Invisible anchor placed at the entrance of the Tent.
