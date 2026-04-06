@@ -238,9 +238,9 @@ export class UIScene extends Phaser.Scene {
   openConfirm(message: string, onConfirm: () => void): void { this.confirm.open(message, onConfirm); }
   closeConfirm(): void { this.confirm.close(); }
 
-  /** Start a new scene, stopping the UI overlay. */
+  /** Start a new scene, properly shutting down GameScene (which cascades to stop UIScene). */
   startScene(key: string): void {
-    this.scene.stop();
     this.scene.start(key);
+    this.scene.stop(SceneKey.Game); // GameScene SHUTDOWN → also stops UIScene
   }
 }

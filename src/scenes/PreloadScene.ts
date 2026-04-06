@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { SceneKey, TextureKey } from '../constants';
+import { SceneKey, TextureKey, MapKey } from '../constants';
 import { TilemapLoader } from '../systems/TilemapLoader';
 
 export class PreloadScene extends Phaser.Scene {
@@ -8,8 +8,12 @@ export class PreloadScene extends Phaser.Scene {
   }
 
   preload(): void {
-    // ── Tilemap + tileset ──────────────────────────────────────────────────
+    // ── Tilemap + tileset (overworld) ──────────────────────────────────────
     TilemapLoader.preload(this);
+
+    // ── Dungeon map + tileset ──────────────────────────────────────────────
+    this.load.tilemapTiledJSON(MapKey.Dungeon, 'assets/maps/dun.json');
+    this.load.image(TextureKey.DungeonTiles, 'assets/tilesets/dun_spritesheet.png');
 
     // ── Player spritesheet ─────────────────────────────────────────────────
     // player.png: 128×128 px, 4 cols × 4 rows, each frame 32×32

@@ -26,11 +26,13 @@ export const SceneKey = {
 type SceneKey = typeof SceneKey[keyof typeof SceneKey];
 
 export const TextureKey = {
-  Tiles:  'tiles',
-  Player: 'player',
-  NPC:    'npc',
+  Tiles:       'tiles',
+  Player:      'player',
+  NPC:         'npc',
+  DungeonTiles: 'dungeon-tiles',
 } as const;
 
 export const MapKey = {
-  World: 'world',
+  World:   'world',
+  Dungeon: 'dungeon',
 } as const;
