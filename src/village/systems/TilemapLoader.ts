@@ -30,6 +30,7 @@ const LAYER_CONFIG: Array<{ name: string; collides: boolean; zone?: ZoneType }> 
   { name: 'Dungeon',             collides: true               },
   { name: 'Trees front',         collides: false               },
   { name: 'Miscs',               collides: false               },
+  { name: 'Tent',                collides: true               },
 ];
 
 export class TilemapLoader {

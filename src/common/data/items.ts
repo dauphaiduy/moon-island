@@ -35,6 +35,10 @@ export const ITEMS: Record<ItemId, ItemDef> = {
   weapon_sword_steel:     { id: 'weapon_sword_steel',     name: 'Kiếm thép',         emoji: '⚔️', maxStack: 1, category: 'weapon', rarity: 'rare',      tier: 3, sellPrice:  700, description: 'Kiếm thép sắc bén. Các kẻ thù trong hầm ngục phải e dè.' },
   weapon_sword_gold:      { id: 'weapon_sword_gold',      name: 'Kiếm vàng',         emoji: '🛡️', maxStack: 1, category: 'weapon', rarity: 'epic',      tier: 4, sellPrice: 2000, description: 'Kiếm dát vàng huyền bí. Năng lượng phát ra từ lưỡi kiếm.' },
   weapon_sword_legendary: { id: 'weapon_sword_legendary', name: 'Kiếm huyền thoại',  emoji: '✨', maxStack: 1, category: 'weapon', rarity: 'legendary', tier: 5, sellPrice: 6000, description: 'Vũ khí của vị anh hùng huyền thoại. Sức mạnh vô song.' },
+  // ── Purchasable Foods (stamina restore) ──────────────────────────────────
+  food_bread:    { id: 'food_bread',    name: 'Bánh mì',      emoji: '🍞', maxStack: 20, category: 'food', rarity: 'common',   sellPrice: 20,  staminaRestore: 20,  description: 'Bánh mì đơn giản. Phục hồi 20 thể lực.' },
+  food_riceball: { id: 'food_riceball', name: 'Cơm nắm',      emoji: '🍙', maxStack: 20, category: 'food', rarity: 'uncommon', sellPrice: 40,  staminaRestore: 40,  description: 'Cơm nắm thơm ngon. Phục hồi 40 thể lực.' },
+  food_porridge: { id: 'food_porridge', name: 'Cháo dưỡng',   emoji: '🍲', maxStack: 10, category: 'food', rarity: 'rare',     sellPrice: 80,  staminaRestore: 100, description: 'Cháo dưỡng sinh lực. Phục hồi toàn bộ thể lực.' },
 };
 
 /** Maps fish display names (from FishingSystem) to their ItemId */

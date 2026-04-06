@@ -56,7 +56,11 @@ export type ItemId =
   | 'weapon_sword_iron'
   | 'weapon_sword_steel'
   | 'weapon_sword_gold'
-  | 'weapon_sword_legendary';
+  | 'weapon_sword_legendary'
+  // ── Foods ───────────────────────────────────────────────────────────────
+  | 'food_bread'
+  | 'food_riceball'
+  | 'food_porridge';
 
 // Item categories — add more as the game grows
 export type ItemCategory = 'seed' | 'food' | 'fish' | 'tool' | 'weapon' | 'material';
@@ -75,6 +79,7 @@ export interface ItemDef {
   tier?:        number;       // tool upgrade level (1 = base, 2 = iron, …)
   xp?:          number;       // XP granted to player on harvest / catch
   description?: string;       // flavor text shown in inventory tooltip
+  staminaRestore?: number;    // stamina restored when this food item is consumed
 }
 
 export interface InventorySlot {

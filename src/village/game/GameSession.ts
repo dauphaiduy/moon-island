@@ -125,6 +125,11 @@ export class GameSession {
           return;
         }
         this.ui.notify(`🛒 Đã mua ${ITEMS[itemId].emoji} ${ITEMS[itemId].name}!`);
+        const staminaRestore = ITEMS[itemId].staminaRestore;
+        if (staminaRestore) {
+          this.runtime.stats.addStamina(staminaRestore);
+          this.ui.notify(`❤️ Phục hồi ${staminaRestore} thể lực!`);
+        }
       };
 
       // Shop sell callback

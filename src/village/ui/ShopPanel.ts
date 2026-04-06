@@ -12,8 +12,14 @@ export class ShopPanel {
   private shopGoldText!:     Phaser.GameObjects.Text;
   private shopTabBuy!:       Phaser.GameObjects.Text;
   private shopTabSell!:      Phaser.GameObjects.Text;
+  private buyTabSeeds!:      Phaser.GameObjects.Text;
+  private buyTabFoods!:      Phaser.GameObjects.Text;
+  private buySubTabDiv!:     Phaser.GameObjects.Rectangle;
   private _isOpen        = false;
   private _tab: 'buy' | 'sell' = 'buy';
+  private _buyCategory: 'seed' | 'food' = 'seed';
+  /** True only when the catalog mixes seed + food items (e.g. chu_hai) */
+  private _hasCategoryTabs = false;
   private _catalog:  ShopItem[]          = [];
   private _invRef:   InventorySystem | null = null;
   private _rowX      = 0;
@@ -35,6 +41,9 @@ export class ShopPanel {
     this._catalog = catalog;
     this._invRef  = inventory;
     this._tab     = 'buy';
+    this._buyCategory = 'seed';
+    const cats = new Set(catalog.map(i => ITEMS[i.itemId]?.category));
+    this._hasCategoryTabs = cats.has('seed') || cats.has('food');
     this.shopTitleText.setText(`${npcEmoji}  ${npcName}`);
     this.refreshRows();
     this._isOpen = true;
@@ -64,6 +73,12 @@ export class ShopPanel {
     this.refreshRows();
   }
 
+  private setBuyCategory(cat: 'seed' | 'food'): void {
+    if (this._buyCategory === cat) return;
+    this._buyCategory = cat;
+    this.refreshRows();
+  }
+
   private refreshRows(): void {
     this.shopRowContainer.removeAll(true);
 
@@ -73,9 +88,23 @@ export class ShopPanel {
     const rw      = this._rowW;
     let   ry      = this._rowStartY;
 
+    const showSubTabs = this._tab === 'buy' && this._hasCategoryTabs;
+    this.buyTabSeeds.setVisible(showSubTabs);
+    this.buyTabFoods.setVisible(showSubTabs);
+    this.buySubTabDiv.setVisible(showSubTabs);
+
     if (this._tab === 'buy') {
       this.shopTabBuy .setColor('#ffe066').setBackgroundColor('#1a3a5a');
       this.shopTabSell.setColor('#888888').setBackgroundColor('#1a1a1a');
+      if (showSubTabs) {
+        if (this._buyCategory === 'seed') {
+          this.buyTabSeeds.setColor('#80ff80').setBackgroundColor('#0a3a1a');
+          this.buyTabFoods.setColor('#888888').setBackgroundColor('#1a1a1a');
+        } else {
+          this.buyTabSeeds.setColor('#888888').setBackgroundColor('#1a1a1a');
+          this.buyTabFoods.setColor('#80ff80').setBackgroundColor('#0a3a1a');
+        }
+      }
     } else {
       this.shopTabBuy .setColor('#888888').setBackgroundColor('#1a1a1a');
       this.shopTabSell.setColor('#ffe066').setBackgroundColor('#2a3000');
@@ -86,13 +115,16 @@ export class ShopPanel {
     }
 
     if (this._tab === 'buy') {
-      this._catalog.forEach((item, _i) => {
+      const filtered = this._hasCategoryTabs
+        ? this._catalog.filter(item => ITEMS[item.itemId]?.category === this._buyCategory)
+        : this._catalog;
+      filtered.forEach((item, _i) => {
         ry = this._rowStartY + _i * (ROW_H + ROW_GAP);
         this.addBuyRow(rx, ry, rw, ROW_H, item);
       });
 
-      if (this._catalog.length === 0) {
-        const t = this.scene.add.text(rx + rw / 2, ry + 30, 'Không có hàng hôm nay', {
+      if (filtered.length === 0) {
+        const t = this.scene.add.text(rx + rw / 2, this._rowStartY + 30, 'Không có hàng hôm nay', {
           fontSize: '12px', color: '#666666',
         }).setOrigin(0.5, 0);
         this.shopRowContainer.add(t);
@@ -200,7 +232,7 @@ export class ShopPanel {
     const BL    = CX - BOX_W / 2;
 
     this._rowX      = BL + 20;
-    this._rowStartY = BT + 102;
+    this._rowStartY = BT + 124;
     this._rowW      = BOX_W - 40;
 
     const overlay = this.scene.add.rectangle(0, 0, W, H, 0x000000, 0.5).setOrigin(0);
@@ -231,6 +263,24 @@ export class ShopPanel {
 
     const tabDiv = this.scene.add.rectangle(CX, BT + 80, BOX_W - 30, 1, 0x4a9eff, 0.25);
 
+    // ── Buy sub-category tabs (seeds / foods) ────────────────────────────────
+    const subTabY = BT + 97;
+    this.buyTabSeeds = this.scene.add.text(BL + 70, subTabY, '🌱 Hạt giống', {
+      fontSize: '11px', color: '#80ff80',
+      backgroundColor: '#0a3a1a',
+      padding: { x: 10, y: 5 },
+    }).setOrigin(0.5).setInteractive({ useHandCursor: true })
+      .on('pointerdown', () => this.setBuyCategory('seed'));
+
+    this.buyTabFoods = this.scene.add.text(BL + 170, subTabY, '🍞 Thực phẩm', {
+      fontSize: '11px', color: '#888888',
+      backgroundColor: '#1a1a1a',
+      padding: { x: 10, y: 5 },
+    }).setOrigin(0.5).setInteractive({ useHandCursor: true })
+      .on('pointerdown', () => this.setBuyCategory('food'));
+
+    this.buySubTabDiv = this.scene.add.rectangle(CX, BT + 113, BOX_W - 30, 1, 0x4a9eff, 0.2);
+
     const closeBtn = this.scene.add.text(CX + BOX_W / 2 - 18, BT + 17, '✕', {
       fontSize: '13px', color: '#888888',
       padding: { x: 5, y: 2 },
@@ -250,7 +300,9 @@ export class ShopPanel {
 
     this.shopContainer = this.scene.add.container(0, 0, [
       overlay, box, this.shopTitleText, topDiv,
-      this.shopTabBuy, this.shopTabSell, tabDiv, closeBtn,
+      this.shopTabBuy, this.shopTabSell, tabDiv,
+      this.buyTabSeeds, this.buyTabFoods, this.buySubTabDiv,
+      closeBtn,
       footDiv, this.shopGoldText, hint,
     ]).setVisible(false).setAlpha(0).setDepth(100);
 

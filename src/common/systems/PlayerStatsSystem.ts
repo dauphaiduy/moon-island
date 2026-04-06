@@ -100,6 +100,12 @@ export class PlayerStatsSystem {
     this.onStaminaChange?.();
   }
 
+  /** Restore `amount` stamina, capped at maxStamina (called when eating food) */
+  addStamina(amount: number): void {
+    this._currentStamina = Math.min(this._currentStamina + amount, this.maxStamina);
+    this.onStaminaChange?.();
+  }
+
   // ─── Persistence ──────────────────────────────────────────────────────────
 
   loadState(s: StatsState): void {
