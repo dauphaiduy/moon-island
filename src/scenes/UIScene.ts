@@ -163,7 +163,7 @@ export class UIScene extends Phaser.Scene {
     this.buildHotbar(hotbarX, hotbarY);
 
     // ── Hint ─────────────────────────────────────────────────────────────────
-    this.add.text(W / 2, H - 4, 'Tab: công cụ  |  E: tương tác  |  I: túi đồ  |  P: nhân vật  |  Q: bán tất cả  |  ESC: menu', {
+    this.add.text(W / 2, H - 4, 'Tab: công cụ  |  E: tương tác  |  I: túi đồ  |  P: nhân vật  |  ESC: menu', {
       fontSize: '10px', color: '#ffffff55',
     }).setOrigin(0.5, 1);
 

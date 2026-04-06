@@ -33,7 +33,7 @@ export class InputController {
     if (!kb) return;
 
     kb.on('keydown-TAB', callbacks.cycleTool);
-    kb.on('keydown-Q',   callbacks.sell);
+    // kb.on('keydown-Q',   callbacks.sell);
     kb.on('keydown-N',   callbacks.skipHour);
     kb.on('keydown-F5',  callbacks.save);
     kb.on('keydown-ESC', callbacks.togglePause);
@@ -52,7 +52,7 @@ export class InputController {
     if (!kb || !this.callbacks) return;
 
     kb.off('keydown-TAB', this.callbacks.cycleTool);
-    kb.off('keydown-Q',   this.callbacks.sell);
+    // kb.off('keydown-Q',   this.callbacks.sell);
     kb.off('keydown-N',   this.callbacks.skipHour);
     kb.off('keydown-F5',  this.callbacks.save);
     kb.off('keydown-ESC', this.callbacks.togglePause);

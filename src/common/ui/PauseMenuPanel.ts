@@ -216,7 +216,7 @@ export class PauseMenuPanel {
       { key: '1 – 8',               desc: 'Chọn ô hotbar'              },
       { key: 'I',                   desc: 'Mở / đóng túi đồ'           },
       { key: 'P',                   desc: 'Mở / đóng chỉ số nhân vật'  },
-      { key: 'Q',                   desc: 'Bán toàn bộ túi đồ'         },
+      // { key: 'Q',                   desc: 'Bán toàn bộ túi đồ'         },
       { key: 'N',                   desc: 'Bỏ qua 1 giờ (debug)'       },
       { key: 'F5',                  desc: 'Lưu game nhanh'             },
       { key: 'ESC',                 desc: 'Tạm dừng / Đóng panel'      },
