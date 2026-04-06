@@ -6,6 +6,7 @@ import type { GameRuntime } from './createGameRuntime';
 import type { UIScene } from '../../scenes/UIScene';
 import type { DialogSystem } from '../systems/DialogSystem';
 import type { ToolId } from './gameTools';
+import { XP_GRANTS } from '../../common/XPSystem';
 
 /**
  * Handles all E-key interaction logic: dialog, shop, NPC, and tile-tool actions.
@@ -48,11 +49,16 @@ export class InteractionHandler {
     }
 
     // ── Dungeon entrance ─────────────────────────────────────────────────────────
+    // TODO: re-enable when DungeonScene is ready
+    // if (this.runtime.dungeonEntrance.isNearPlayer(this.runtime.player.x, this.runtime.player.y)) {
+    //   this.ui.openConfirm(
+    //     'Bạn có muốn vào Hầm Ngục không?',
+    //     () => this.ui.startScene(SceneKey.Dungeon),
+    //   );
+    //   return;
+    // }
     if (this.runtime.dungeonEntrance.isNearPlayer(this.runtime.player.x, this.runtime.player.y)) {
-      this.ui.openConfirm(
-        'Bạn có muốn vào Hầm Ngục không?',
-        () => this.ui.startScene(SceneKey.Dungeon),
-      );
+      this.ui.notify('🚧 Hầm Ngục đang tạm đóng cửa!', '#ff8844');
       return;
     }
 
@@ -88,11 +94,13 @@ export class InteractionHandler {
             break;
           }
           this.runtime.inventory.add(harvested, 1);
+          this.runtime.xp.add(XP_GRANTS.HARVEST);
           this.ui.notify(`✅ Thu hoạch ${ITEMS[harvested].emoji} ${ITEMS[harvested].name}!`);
           break;
         }
         // Otherwise till the soil
         if (this.runtime.farming.till(tileX, tileY)) {
+          this.runtime.xp.add(XP_GRANTS.TILL);
           this.ui.notify('🌱 Đã cày đất');
         }
         break;
@@ -111,12 +119,14 @@ export class InteractionHandler {
             const cropId = this.runtime.farming.plantSeed(tileX, tileY, seed);
             if (cropId) {
               this.runtime.inventory.removeByIdAndQty(seed, 1);
+              this.runtime.xp.add(XP_GRANTS.PLANT);
               this.ui.notify(`🌾 Đã gieo ${ITEMS[seed].emoji} ${ITEMS[seed].name}`);
               break;
             }
           }
           // No seeds — just water the soil
           if (this.runtime.farming.water(tileX, tileY)) {
+            this.runtime.xp.add(XP_GRANTS.WATER);
             this.ui.notify('💧 Đã tưới đất');
           }
           break;
@@ -124,6 +134,7 @@ export class InteractionHandler {
 
         // On seeded soil: water to continue growth
         if (this.runtime.farming.water(tileX, tileY)) {
+          this.runtime.xp.add(XP_GRANTS.WATER);
           this.ui.notify('💧 Đã tưới cây');
         } else if (tile.watered) {
           this.ui.notify('💧 Đã tưới rồi hôm nay');

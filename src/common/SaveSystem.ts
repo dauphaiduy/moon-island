@@ -28,6 +28,8 @@ export interface SaveData {
   playerY: number;
   toolIndex: number;
   gold: number;
+  xp: number;
+  level: number;
   slots: (InventorySlotSave | null)[];
   farmTiles: FarmTileSave[];
   npcFriendship: Record<string, number>;
@@ -109,6 +111,8 @@ export class SaveSystem {
       playerY:  runtime.player.y,
       toolIndex,
       gold:     runtime.inventory.gold,
+      xp:       runtime.xp.getState().xp,
+      level:    runtime.xp.getState().level,
       slots,
       farmTiles,
       npcFriendship,
@@ -134,6 +138,9 @@ export class SaveSystem {
 
   /** Apply loaded data onto a freshly created runtime */
   static apply(data: SaveData, runtime: GameRuntime, dialog: DialogSystem): void {
+    // XP / level
+    runtime.xp.loadState(data.xp ?? 0, data.level ?? 1);
+
     // Day / time
     runtime.dayNight.loadState(data.day, data.minute);
 

@@ -39,6 +39,11 @@ export class UIScene extends Phaser.Scene {
   private hotbarEmojis: Phaser.GameObjects.Text[]      = [];
   private hotbarQtys:   Phaser.GameObjects.Text[]      = [];
 
+  // ── XP / Level ────────────────────────────────────────────────────────────
+  private levelText!:  Phaser.GameObjects.Text;
+  private xpBarFill!:  Phaser.GameObjects.Rectangle;
+  private xpHintText!: Phaser.GameObjects.Text;
+
   // ── Panels ────────────────────────────────────────────────────────────────
   private pauseMenu!: PauseMenuPanel;
   private inventory!: InventoryPanel;
@@ -86,7 +91,27 @@ export class UIScene extends Phaser.Scene {
       backgroundColor: '#00000066',
       padding: { x: 6, y: 4 },
     }).setOrigin(1, 0);
+    // ── XP / Level bar (top-right, below gold) ─────────────────────────────────────────────
+    const xpBarW = 88;
+    const xpRx   = W - 12;  // right edge
+    const xpTy   = 38;      // top y
 
+    this.levelText = this.add.text(xpRx, xpTy, '⭐ Lv. 1', {
+      fontSize: '11px', color: '#aaddff',
+      backgroundColor: '#00000066',
+      padding: { x: 5, y: 3 },
+    }).setOrigin(1, 0);
+
+    this.add.rectangle(xpRx, xpTy + 20, xpBarW, 6, 0x223344, 0.9)
+      .setOrigin(1, 0)
+      .setStrokeStyle(1, 0x446688, 0.8);
+
+    this.xpBarFill = this.add.rectangle(xpRx - xpBarW + 1, xpTy + 20, 0, 6, 0x44aaff, 1)
+      .setOrigin(0, 0);
+
+    this.xpHintText = this.add.text(xpRx, xpTy + 28, '0 XP → Lv.2', {
+      fontSize: '9px', color: '#7799bb',
+    }).setOrigin(1, 0);
     // ── Fishing status ───────────────────────────────────────────────────────
     this.fishingText = this.add.text(W / 2, 64, '', {
       fontSize: '15px', color: '#ffe066',
@@ -202,6 +227,15 @@ export class UIScene extends Phaser.Scene {
 
   setGold(amount: number): void {
     this.goldText.setText(`💰 ${amount.toLocaleString()}G`);
+  }
+
+  setXP(level: number, xp: number, xpToNext: number, progress: number): void {
+    const maxed = level >= 20;
+    this.levelText.setText(`⭐ Lv. ${level}${maxed ? ' MAX' : ''}`);
+    const barW = 88;
+    this.xpBarFill.setSize(Math.round(barW * (maxed ? 1 : progress)), 6);
+    this.xpHintText.setText(maxed ? 'MAX LEVEL' : `${xpToNext} XP → Lv.${level + 1}`);
+    void xp; // xp total stored in XPSystem, not needed here for display
   }
 
   setFishingStatus(text: string): void {

@@ -9,6 +9,7 @@ import { SaveSystem } from '../../common/SaveSystem';
 import { DungeonLoot } from '../../dungeon/systems/DungeonLoot';
 import { InputController } from './InputController';
 import { InteractionHandler } from './InteractionHandler';
+import { XP_GRANTS } from '../../common/XPSystem';
 
 export class GameSession {
   private readonly scene: Phaser.Scene;
@@ -152,6 +153,14 @@ export class GameSession {
         void this.saveGame();
       };
 
+      // XP bar updates
+      this.runtime.xp.onXPChange = () => {
+        this.ui.setXP(this.runtime.xp.level, this.runtime.xp.xp, this.runtime.xp.xpToNext, this.runtime.xp.progress);
+      };
+      this.runtime.xp.onLevelUp = (level) => {
+        this.ui.notify(`🎉 Lên cấp ${level}! +5 sức mạnh ✨`, '#ffcc00');
+      };
+
       this.loadSave();
     };
 
@@ -224,6 +233,8 @@ export class GameSession {
     void SaveSystem.load().then(data => {
       if (!data || !this.dialog) return;
       SaveSystem.apply(data, this.runtime, this.dialog);
+      // Refresh XP bar with loaded state (loadState doesn’t fire onXPChange)
+      this.ui.setXP(this.runtime.xp.level, this.runtime.xp.xp, this.runtime.xp.xpToNext, this.runtime.xp.progress);
       this.ui.notify('💾 Đã tải game!');
     });
   }
@@ -234,6 +245,7 @@ export class GameSession {
       const leftover = this.runtime.inventory.add(itemId, qty);
       const added = qty - leftover;
       if (added > 0) {
+        this.runtime.xp.add(XP_GRANTS.DUNGEON_LOOT * added);
         this.ui.notify(`🎁 Nhận được ${ITEMS[itemId].emoji} ${ITEMS[itemId].name} từ hầm ngục!`);
       }
     }
@@ -252,6 +264,7 @@ export class GameSession {
       return;
     }
     SaveSystem.apply(data, this.runtime, this.dialog);
+    this.ui.setXP(this.runtime.xp.level, this.runtime.xp.xp, this.runtime.xp.xpToNext, this.runtime.xp.progress);
     this.ui.notify('💾 Đã tải game!');
   }
 
