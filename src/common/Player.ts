@@ -121,9 +121,21 @@ export class Player extends Phaser.GameObjects.Container {
     this._isDoingAction = true;
     this.sprite.play(`farm-${action}`);
     this.sprite.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => {
+      if (action === 'fishing') {
+        // Hold on the last frame — stay locked until stopFishing() is called
+        const lastFrame = 3 * 4 + 3; // row 3, col 3
+        this.sprite.setFrame(lastFrame);
+        return;
+      }
       this._isDoingAction = false;
       this.sprite.play(`idle-${this._direction}`);
     });
+  }
+
+  /** Release the held fishing pose and return to idle. */
+  stopFishing(): void {
+    this._isDoingAction = false;
+    this.sprite.play(`idle-${this._direction}`);
   }
 
   // ─── Getters ────────────────────────────────────────────────────────────────

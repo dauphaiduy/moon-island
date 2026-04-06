@@ -154,6 +154,7 @@ export class InteractionHandler {
         }
         if (this.runtime.fishing.isActive) {
           this.runtime.fishing.cancel();
+          this.runtime.player.stopFishing();
           this.ui.notify('Đã hủy câu', '#e67e22');
         }
         break;

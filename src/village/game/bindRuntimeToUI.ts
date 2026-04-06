@@ -29,6 +29,7 @@ export function bindRuntimeToUI({ scene, runtime, ui }: BindRuntimeToUIParams): 
   };
 
   runtime.fishing.onCatch = (fish) => {
+    runtime.player.stopFishing();
     const added = runtime.inventory.addFish(fish);
     if (added) {
       const fishId = FISH_NAME_MAP[fish];
@@ -38,7 +39,10 @@ export function bindRuntimeToUI({ scene, runtime, ui }: BindRuntimeToUIParams): 
     }
     else ui.notify(`🐟 ${fish} - túi đồ đầy!`, '#e67e22');
   };
-  runtime.fishing.onMiss = () => ui.notify('❌ Cá thoát mất!', '#e74c3c');
+  runtime.fishing.onMiss = () => {
+    runtime.player.stopFishing();
+    ui.notify('❌ Cá thoát mất!', '#e74c3c');
+  };
 
   runtime.dayNight.setTime(7);
   runtime.inventory.onChange?.();
