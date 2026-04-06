@@ -5,16 +5,46 @@ import { Player } from '../objects/Player';
 // dun.json tiles are 16 px; scale ×2 → 32 px to match the player sprite.
 const MAP_SCALE = 1.5;
 
-// Layer names in dun.json that block movement.
-const COLLIDE_LAYERS = ['Walls', 'Walls sides', 'Walls pillars', 'Doors'];
-
 // Spawn position in tile coordinates (near the entrance door).
 const SPAWN_TILE_X = 10;
 const SPAWN_TILE_Y = 11;
 
+/**
+ * Zone types that dungeon tiles can belong to.
+ * 'trap'   — hazard tiles (Traps layer)
+ * 'pickup' — item/loot tiles (Pickups layer)
+ * 'door'   — exit/entrance tiles (Doors layer)
+ * 'none'   — wall, decoration, or passable floor with no special interaction
+ */
+export type DungeonZone = 'trap' | 'pickup' | 'door' | 'none';
+
+/**
+ * Per-layer configuration for the dungeon map.
+ *  collides — whether this layer has physics tile bodies that block movement
+ *  zone     — interaction zone type assigned to non-empty tiles in this layer;
+ *             omit (or use 'none') for purely visual / structural layers
+ */
+const LAYER_CONFIG: Array<{ name: string; collides: boolean; zone?: DungeonZone }> = [
+  { name: 'Floor',          collides: false                          },
+  { name: 'Walls',          collides: true                           },
+  { name: 'Walls sides',    collides: true                           },
+  { name: 'Gargoyles',      collides: false                          },
+  { name: 'Walls pillars',  collides: true                           },
+  { name: 'Traps',          collides: false, zone: 'trap'            },
+  { name: 'Pickups',        collides: false, zone: 'pickup'          },
+  { name: 'Next Level',     collides: false, zone: 'pickup'          },
+  { name: 'Miscs',          collides: false                          },
+  { name: 'Doors',          collides: true,  zone: 'door'            },
+];
+
 export class DungeonScene extends Phaser.Scene {
   private player!: Player;
   private collideLayers: Phaser.Tilemaps.TilemapLayer[] = [];
+  /** All created layers, keyed by their config name — for future per-layer interaction. */
+  private namedLayers = new Map<string, Phaser.Tilemaps.TilemapLayer>();
+  /** Zone grid [tileY][tileX] built from LAYER_CONFIG.zone entries. */
+  private zoneGrid: DungeonZone[][] = [];
+  private tilePixels = 0; // raw tilemap tilewidth * MAP_SCALE
   private exitKey!: Phaser.Input.Keyboard.Key;
 
   constructor() {
@@ -22,6 +52,11 @@ export class DungeonScene extends Phaser.Scene {
   }
 
   create(): void {
+    // Reset state on scene restart
+    this.collideLayers = [];
+    this.namedLayers.clear();
+    this.zoneGrid = [];
+
     // ── Tilemap ────────────────────────────────────────────────────────────
     const map = this.make.tilemap({ key: MapKey.Dungeon });
     const tileset = map.addTilesetImage('spritefusion', TextureKey.DungeonTiles);
@@ -31,31 +66,25 @@ export class DungeonScene extends Phaser.Scene {
       return;
     }
 
-    const layerOrder = [
-      'Floor',
-      'Walls',
-      'Walls sides',
-      'Gargoyles',
-      'Walls pillars',
-      'Traps',
-      'Pickups',
-      'Miscs',
-      'Doors',
-    ];
+    this.tilePixels = map.tileWidth * MAP_SCALE;
 
-    for (const name of layerOrder) {
-      const layer = map.createLayer(name, tileset, 0, 0);
+    for (const cfg of LAYER_CONFIG) {
+      const layer = map.createLayer(cfg.name, tileset, 0, 0);
       if (!layer) {
-        console.warn(`[DungeonScene] Layer "${name}" not found, skipping`);
+        console.warn(`[DungeonScene] Layer "${cfg.name}" not found, skipping`);
         continue;
       }
       layer.setScale(MAP_SCALE);
+      this.namedLayers.set(cfg.name, layer);
 
-      if (COLLIDE_LAYERS.includes(name)) {
+      if (cfg.collides) {
         layer.setCollisionByExclusion([-1]);
         this.collideLayers.push(layer);
       }
     }
+
+    // Build zone grid so future systems can query getZone(tileX, tileY)
+    this.buildZoneGrid(map);
 
     const mapW = map.widthInPixels  * MAP_SCALE;
     const mapH = map.heightInPixels * MAP_SCALE;
@@ -94,6 +123,50 @@ export class DungeonScene extends Phaser.Scene {
     // ── Exit key ───────────────────────────────────────────────────────────
     this.exitKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.ESC);
   }
+
+  // ── Zone / layer helpers (for future interaction systems) ─────────────────
+
+  /**
+   * Returns the DungeonZone for a given tile coordinate.
+   * Call with worldX/worldY: tileX = Math.floor(worldX / tilePixels), etc.
+   */
+  getZone(tileX: number, tileY: number): DungeonZone {
+    return this.zoneGrid[tileY]?.[tileX] ?? 'none';
+  }
+
+  /** Returns the tile pixel size after scale — useful for world→tile conversion. */
+  get tileSize(): number { return this.tilePixels; }
+
+  /** Returns a named layer by its Tiled layer name, or undefined if not created. */
+  getLayer(name: string): Phaser.Tilemaps.TilemapLayer | undefined {
+    return this.namedLayers.get(name);
+  }
+
+  private buildZoneGrid(map: Phaser.Tilemaps.Tilemap): void {
+    const mapW = map.width;
+    const mapH = map.height;
+
+    // Default every tile to 'none'
+    for (let ty = 0; ty < mapH; ty++) {
+      this.zoneGrid[ty] = new Array<DungeonZone>(mapW).fill('none');
+    }
+
+    for (const cfg of LAYER_CONFIG) {
+      if (!cfg.zone) continue;
+      if (!this.namedLayers.has(cfg.name)) continue;
+
+      for (let ty = 0; ty < mapH; ty++) {
+        for (let tx = 0; tx < mapW; tx++) {
+          const tile = map.getTileAt(tx, ty, false, cfg.name);
+          if (tile && tile.index !== -1) {
+            this.zoneGrid[ty][tx] = cfg.zone;
+          }
+        }
+      }
+    }
+  }
+
+  // ── Game loop ──────────────────────────────────────────────────────────────
 
   update(_time: number, _delta: number): void {
     this.player.update();
