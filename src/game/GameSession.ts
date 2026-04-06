@@ -6,6 +6,7 @@ import { bindRuntimeToUI } from './bindRuntimeToUI';
 import { createGameRuntime, type GameRuntime } from './createGameRuntime';
 import type { DialogSystem } from '../systems/DialogSystem';
 import { SaveSystem } from '../systems/SaveSystem';
+import { DungeonLoot } from '../systems/DungeonLoot';
 import { InputController } from './InputController';
 import { InteractionHandler } from './InteractionHandler';
 
@@ -217,11 +218,25 @@ export class GameSession {
   }
 
   private loadSave(): void {
+    // Drain any loot collected in the dungeon before applying the save
+    this.applyDungeonLoot();
+
     void SaveSystem.load().then(data => {
       if (!data || !this.dialog) return;
       SaveSystem.apply(data, this.runtime, this.dialog);
       this.ui.notify('💾 Đã tải game!');
     });
+  }
+
+  private applyDungeonLoot(): void {
+    const loot = DungeonLoot.drain();
+    for (const { itemId, qty } of loot) {
+      const leftover = this.runtime.inventory.add(itemId, qty);
+      const added = qty - leftover;
+      if (added > 0) {
+        this.ui.notify(`🎁 Nhận được ${ITEMS[itemId].emoji} ${ITEMS[itemId].name} từ hầm ngục!`);
+      }
+    }
   }
 
   private async newGame(): Promise<void> {

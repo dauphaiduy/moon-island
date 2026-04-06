@@ -28,6 +28,13 @@ export const ITEMS: Record<ItemId, ItemDef> = {
   tool_fishingRod_silver:     { id: 'tool_fishingRod_silver',     name: 'Cần câu bạc',          emoji: '🎣', maxStack: 1, category: 'tool', rarity: 'rare',      tier: 4, sellPrice:  400, description: 'Cần câu bạc sáng bóng. Cá khó thoát hơn nhiều.' },
   tool_fishingRod_gold:       { id: 'tool_fishingRod_gold',       name: 'Cần câu vàng',         emoji: '✨', maxStack: 1, category: 'tool', rarity: 'epic',      tier: 5, sellPrice: 1000, description: 'Cần câu dát vàng. Tỉ lệ bắt cá quý cực cao.' },
   tool_fishingRod_legendary:  { id: 'tool_fishingRod_legendary',  name: 'Cần câu huyền thoại',  emoji: '💫', maxStack: 1, category: 'tool', rarity: 'legendary', tier: 6, sellPrice: 3000, description: 'Vũ khí của ngư dân huyền thoại. Không cá nào thoát được.' },
+
+  // ── Swords (weapon tier 1 → 5) ─────────────────────────────────────────────
+  weapon_sword_wood:      { id: 'weapon_sword_wood',      name: 'Kiếm gỗ',           emoji: '🗡️', maxStack: 1, category: 'weapon', rarity: 'common',    tier: 1, sellPrice:   80, description: 'Một thanh kiếm gỗ thô sơ. Phù hợp cho người mới vào hầm ngục.' },
+  weapon_sword_iron:      { id: 'weapon_sword_iron',      name: 'Kiếm sắt',          emoji: '⚔️', maxStack: 1, category: 'weapon', rarity: 'uncommon',  tier: 2, sellPrice:  250, description: 'Kiếm sắt rèn chắc. Sát thương tăng so với kiếm gỗ.' },
+  weapon_sword_steel:     { id: 'weapon_sword_steel',     name: 'Kiếm thép',         emoji: '⚔️', maxStack: 1, category: 'weapon', rarity: 'rare',      tier: 3, sellPrice:  700, description: 'Kiếm thép sắc bén. Các kẻ thù trong hầm ngục phải e dè.' },
+  weapon_sword_gold:      { id: 'weapon_sword_gold',      name: 'Kiếm vàng',         emoji: '🛡️', maxStack: 1, category: 'weapon', rarity: 'epic',      tier: 4, sellPrice: 2000, description: 'Kiếm dát vàng huyền bí. Năng lượng phát ra từ lưỡi kiếm.' },
+  weapon_sword_legendary: { id: 'weapon_sword_legendary', name: 'Kiếm huyền thoại',  emoji: '✨', maxStack: 1, category: 'weapon', rarity: 'legendary', tier: 5, sellPrice: 6000, description: 'Vũ khí của vị anh hùng huyền thoại. Sức mạnh vô song.' },
 };
 
 /** Maps fish display names (from FishingSystem) to their ItemId */

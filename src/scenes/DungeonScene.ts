@@ -1,22 +1,34 @@
 import Phaser from 'phaser';
 import { SceneKey, TextureKey, MapKey, TILE_SIZE } from '../constants';
 import { Player } from '../objects/Player';
+import { ITEMS } from '../data/items';
+import { DungeonLoot } from '../systems/DungeonLoot';
+import { TreasurePanel, type TreasureLootEntry } from '../ui/TreasurePanel';
 
 // dun.json tiles are 16 px; scale ×2 → 32 px to match the player sprite.
-const MAP_SCALE = 1.5;
+const MAP_SCALE = 2;
 
 // Spawn position in tile coordinates (near the entrance door).
 const SPAWN_TILE_X = 10;
 const SPAWN_TILE_Y = 11;
 
 /**
+ * Default loot inside every unopened treasure chest.
+ * In the future this can be keyed by tile position for varied rewards.
+ */
+const TREASURE_CONTENTS: TreasureLootEntry[] = [
+  { item: ITEMS['weapon_sword_wood'], qty: 1 },
+];
+
+/**
  * Zone types that dungeon tiles can belong to.
  * 'trap'   — hazard tiles (Traps layer)
- * 'pickup' — item/loot tiles (Pickups layer)
+ * 'treasure' — item/loot tiles (Pickups layer)
  * 'door'   — exit/entrance tiles (Doors layer)
+ * 'level_up' — tiles that trigger level progression (Next Level layer)
  * 'none'   — wall, decoration, or passable floor with no special interaction
  */
-export type DungeonZone = 'trap' | 'pickup' | 'door' | 'level_up' | 'none';
+export type DungeonZone = 'trap' | 'treasure' | 'door' | 'level_up' | 'none';
 
 /**
  * Per-layer configuration for the dungeon map.
@@ -31,7 +43,7 @@ const LAYER_CONFIG: Array<{ name: string; collides: boolean; zone?: DungeonZone 
   { name: 'Gargoyles',      collides: false                          },
   { name: 'Walls pillars',  collides: true                           },
   { name: 'Traps',          collides: false, zone: 'trap'            },
-  { name: 'Pickups',        collides: false, zone: 'pickup'          },
+  { name: 'Pickups',        collides: false, zone: 'treasure'        },
   { name: 'Next Level',     collides: false, zone: 'level_up'        },
   { name: 'Miscs',          collides: false                          },
   { name: 'Doors',          collides: true,  zone: 'door'            },
@@ -45,6 +57,11 @@ export class DungeonScene extends Phaser.Scene {
   /** Zone grid [tileY][tileX] built from LAYER_CONFIG.zone entries. */
   private zoneGrid: DungeonZone[][] = [];
   private tilePixels = 0; // raw tilemap tilewidth * MAP_SCALE
+  /** Tile keys ("tileX,tileY") that have already been looted. */
+  private lootedTiles = new Set<string>();
+  private treasurePanel!: TreasurePanel;
+  private notifText!: Phaser.GameObjects.Text;
+  private notifTimer: Phaser.Time.TimerEvent | null = null;
   private exitKey!: Phaser.Input.Keyboard.Key;
 
   constructor() {
@@ -56,6 +73,7 @@ export class DungeonScene extends Phaser.Scene {
     this.collideLayers = [];
     this.namedLayers.clear();
     this.zoneGrid = [];
+    this.lootedTiles.clear();
 
     // ── Tilemap ────────────────────────────────────────────────────────────
     const map = this.make.tilemap({ key: MapKey.Dungeon });
@@ -120,6 +138,16 @@ export class DungeonScene extends Phaser.Scene {
       padding: { x: 6, y: 3 },
     }).setOrigin(0.5, 1).setScrollFactor(0).setDepth(10);
 
+    // ── Notification bar ───────────────────────────────────────────────────
+    this.notifText = this.add.text(W / 4, H - 30, '', {
+      fontSize: '12px', color: '#ffffff',
+      backgroundColor: '#00000099',
+      padding: { x: 8, y: 4 },
+    }).setOrigin(0.5, 1).setScrollFactor(0).setDepth(15).setAlpha(0);
+
+    // ── Treasure panel ─────────────────────────────────────────────────────
+    this.treasurePanel = new TreasurePanel(this);
+
     // ── Exit key ───────────────────────────────────────────────────────────
     this.exitKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.ESC);
   }
@@ -172,7 +200,61 @@ export class DungeonScene extends Phaser.Scene {
     this.player.update();
 
     if (Phaser.Input.Keyboard.JustDown(this.exitKey)) {
-      this.scene.start(SceneKey.Game); // starts GameScene and stops DungeonScene
+      if (this.treasurePanel.isOpen) {
+        this.treasurePanel.close();
+      } else {
+        this.scene.start(SceneKey.Game); // starts GameScene and stops DungeonScene
+      }
+      return;
     }
+
+    if (this.player.interactJustPressed && !this.treasurePanel.isOpen) {
+      this.handleInteract();
+    }
+  }
+
+  // ── Interaction ───────────────────────────────────────────────────────────
+
+  private handleInteract(): void {
+    // World → tile conversion uses the scaled tile size
+    const tileX = Math.floor(this.player.x / this.tilePixels);
+    const tileY = Math.floor(this.player.y / this.tilePixels);
+
+    // Check current tile + facing tile
+    const FACING_OFFSET: Record<string, [number, number]> = {
+      up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0],
+    };
+    const [dx, dy] = FACING_OFFSET[this.player.direction] ?? [0, 0];
+
+    const candidates = [
+      { tx: tileX,      ty: tileY      },
+      { tx: tileX + dx, ty: tileY + dy },
+    ];
+
+    for (const { tx, ty } of candidates) {
+      if (this.getZone(tx, ty) === 'treasure') {
+        const key = `${tx},${ty}`;
+        if (this.lootedTiles.has(key)) {
+          this.notify('📦 Rương này đã được mở rồi.');
+          return;
+        }
+        this.treasurePanel.open(TREASURE_CONTENTS, (loot) => {
+          this.lootedTiles.add(key);
+          for (const { item, qty } of loot) {
+            DungeonLoot.add(item.id, qty);
+          }
+          this.notify('🎁 Đã lấy đồ! Quay về làng để nhận vào túi.');
+        });
+        return;
+      }
+    }
+  }
+
+  private notify(message: string): void {
+    this.notifTimer?.remove();
+    this.notifText.setText(message).setAlpha(1);
+    this.notifTimer = this.time.delayedCall(2800, () => {
+      this.tweens.add({ targets: this.notifText, alpha: 0, duration: 400 });
+    });
   }
 }

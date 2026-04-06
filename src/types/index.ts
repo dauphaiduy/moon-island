@@ -50,10 +50,16 @@ export type ItemId =
   | 'tool_fishingRod_bronze'
   | 'tool_fishingRod_silver'
   | 'tool_fishingRod_gold'
-  | 'tool_fishingRod_legendary';
+  | 'tool_fishingRod_legendary'
+  // ── Swords ──────────────────────────────────────────────────────────────
+  | 'weapon_sword_wood'
+  | 'weapon_sword_iron'
+  | 'weapon_sword_steel'
+  | 'weapon_sword_gold'
+  | 'weapon_sword_legendary';
 
 // Item categories — add more as the game grows
-export type ItemCategory = 'seed' | 'food' | 'fish' | 'tool' | 'material';
+export type ItemCategory = 'seed' | 'food' | 'fish' | 'tool' | 'weapon' | 'material';
 
 // Rarity tiers — drive drop rates, shop pricing, UI badge colours
 export type ItemRarity = 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
