@@ -90,7 +90,7 @@ export class Player extends Phaser.GameObjects.Container {
   // ─── Static: register farming action animations once per scene ───────────
 
   static createFarmingAnims(scene: Phaser.Scene): void {
-    if (scene.anims.exists('farm-hoe')) return;
+    if (scene.anims.exists('farm-hoe-right')) return;
 
     const COLS = 4;
     const FRAME_RATE_ACTION = 8;
@@ -100,17 +100,25 @@ export class Player extends Phaser.GameObjects.Container {
       ['plant',   2],
       ['fishing', 3],
     ];
+    const sides: Array<['right' | 'left', string]> = [
+      ['right', TextureKey.PlayerFarmingRight],
+      ['left',  TextureKey.PlayerFarmingLeft],
+    ];
 
     for (const [action, row] of actions) {
-      scene.anims.create({
-        key: `farm-${action}`,
-        frames: scene.anims.generateFrameNumbers(TextureKey.PlayerFarming, {
-          start: row * COLS,
-          end:   row * COLS + 3,
-        }),
-        frameRate: FRAME_RATE_ACTION,
-        repeat: 0,
-      });
+      for (const [side, textureKey] of sides) {
+        // Left sprite is a horizontal flip of right, so frames run in reverse order
+        const frameList = side === 'left'
+          ? [row*COLS+3, row*COLS+2, row*COLS+1, row*COLS+0].map(f => ({ key: textureKey, frame: f }))
+          : scene.anims.generateFrameNumbers(textureKey, { start: row * COLS, end: row * COLS + 3 });
+
+        scene.anims.create({
+          key: `farm-${action}-${side}`,
+          frames: frameList,
+          frameRate: FRAME_RATE_ACTION,
+          repeat: 0,
+        });
+      }
     }
   }
 
@@ -119,11 +127,13 @@ export class Player extends Phaser.GameObjects.Container {
   playAction(action: 'hoe' | 'water' | 'plant' | 'fishing'): void {
     if (this._isDoingAction) return;
     this._isDoingAction = true;
-    this.sprite.play(`farm-${action}`);
+    const side = this._direction === 'left' ? 'left' : 'right';
+    this.sprite.play(`farm-${action}-${side}`);
     this.sprite.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => {
       if (action === 'fishing') {
         // Hold on the last frame — stay locked until stopFishing() is called
-        const lastFrame = 3 * 4 + 3; // row 3, col 3
+        // Left frames are reversed, so the last played frame is col 0 (not col 3)
+        const lastFrame = side === 'left' ? 3 * 4 + 0 : 3 * 4 + 3;
         this.sprite.setFrame(lastFrame);
         return;
       }

@@ -22,9 +22,13 @@ export class PreloadScene extends Phaser.Scene {
       frameWidth:  32,
       frameHeight: 32,
     });
-    // sprite_farming_128x128.png: 4 cols × 4 rows, each frame 32×32
+    // sprite_farming: 4 cols × 4 rows, each frame 32×32
     // row 0=hoe  row 1=water  row 2=plant  row 3=fishing
-    this.load.spritesheet(TextureKey.PlayerFarming, 'assets/sprite_farming.png', {
+    this.load.spritesheet(TextureKey.PlayerFarmingRight, 'assets/right_sprite_farming.png', {
+      frameWidth:  32,
+      frameHeight: 32,
+    });
+    this.load.spritesheet(TextureKey.PlayerFarmingLeft, 'assets/left_sprite_farming.png', {
       frameWidth:  32,
       frameHeight: 32,
     });
