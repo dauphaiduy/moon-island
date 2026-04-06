@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
-import { TILE_SIZE } from '../constants';
-import type { ShopItem } from '../types/npc';
+import { TILE_SIZE } from '../../constants';
+import type { ShopItem } from '../../types/npc';
 
 /**
  * Tile coordinates for the "Shop - Tools" building.

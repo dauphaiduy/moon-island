@@ -1,12 +1,12 @@
 import Phaser from 'phaser';
-import { SceneKey } from '../constants';
-import type { UIScene } from '../scenes/UIScene';
-import { ITEMS } from '../data/items';
+import { SceneKey } from '../../constants';
+import type { UIScene } from '../../scenes/UIScene';
+import { ITEMS } from '../../common/items';
 import { bindRuntimeToUI } from './bindRuntimeToUI';
 import { createGameRuntime, type GameRuntime } from './createGameRuntime';
 import type { DialogSystem } from '../systems/DialogSystem';
-import { SaveSystem } from '../systems/SaveSystem';
-import { DungeonLoot } from '../systems/DungeonLoot';
+import { SaveSystem } from '../../common/SaveSystem';
+import { DungeonLoot } from '../../dungeon/systems/DungeonLoot';
 import { InputController } from './InputController';
 import { InteractionHandler } from './InteractionHandler';
 

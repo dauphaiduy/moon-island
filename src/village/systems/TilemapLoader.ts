@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { TILE_SIZE, MAP_WIDTH, MAP_HEIGHT, TextureKey, MapKey } from '../constants';
+import { TILE_SIZE, MAP_WIDTH, MAP_HEIGHT, TextureKey, MapKey } from '../../constants';
 
 export type ZoneType = 'grass' | 'farm' | 'water' | 'path' | 'none';
 

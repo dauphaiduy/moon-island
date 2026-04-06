@@ -1,9 +1,9 @@
 import Phaser from 'phaser';
-import { GameScene } from '../scenes/GameScene';
+import { GameScene } from '../village/scenes/GameScene';
 import { MenuScene } from '../scenes/MenuScene';
 import { PreloadScene } from '../scenes/PreloadScene';
 import { UIScene } from '../scenes/UIScene';
-import { DungeonScene } from '../scenes/DungeonScene';
+import { DungeonScene } from '../dungeon/scenes/DungeonScene';
 
 export function createGameConfig(): Phaser.Types.Core.GameConfig {
   return {

@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
-import type { ItemDef } from '../types';
-import type { ItemRarity } from '../types';
+import type { ItemDef } from '../../types';
+import type { ItemRarity } from '../../types';
 
 export interface TreasureLootEntry {
   item: ItemDef;

@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
-import { FISHING } from '../constants';
-import type { FishingState } from '../types';
+import { FISHING } from '../../constants';
+import type { FishingState } from '../../types';
 
 export class FishingSystem {
   private state: FishingState = {

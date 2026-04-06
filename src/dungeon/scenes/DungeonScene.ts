@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
-import { SceneKey, TextureKey, MapKey, TILE_SIZE } from '../constants';
-import { Player } from '../objects/Player';
-import { ITEMS } from '../data/items';
+import { SceneKey, TextureKey, MapKey, TILE_SIZE } from '../../constants';
+import { Player } from '../../common/Player';
+import { ITEMS } from '../../common/items';
 import { DungeonLoot } from '../systems/DungeonLoot';
 import { TreasurePanel, type TreasureLootEntry } from '../ui/TreasurePanel';
 
@@ -43,7 +43,7 @@ const LAYER_CONFIG: Array<{ name: string; collides: boolean; zone?: DungeonZone 
   { name: 'Gargoyles',      collides: false                          },
   { name: 'Walls pillars',  collides: true                           },
   { name: 'Traps',          collides: false, zone: 'trap'            },
-  { name: 'Pickups',        collides: false, zone: 'treasure'        },
+  { name: 'Pickups',        collides: true, zone: 'treasure'        },
   { name: 'Next Level',     collides: false, zone: 'level_up'        },
   { name: 'Miscs',          collides: false                          },
   { name: 'Doors',          collides: true,  zone: 'door'            },

@@ -1,5 +1,5 @@
-import type { GameRuntime } from '../game/createGameRuntime';
-import type { DialogSystem } from './DialogSystem';
+import type { GameRuntime } from '../village/game/createGameRuntime';
+import type { DialogSystem } from '../village/systems/DialogSystem';
 import type { ItemId, CropType } from '../types';
 
 // ─── Save data shape ──────────────────────────────────────────────────────────

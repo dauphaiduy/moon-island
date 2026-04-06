@@ -1,7 +1,7 @@
 import type { ItemId, InventorySlot } from '../types';
-import { ITEMS, FISH_NAME_MAP } from '../data/items';
+import { ITEMS, FISH_NAME_MAP } from './items';
 
-export { ITEMS } from '../data/items';
+export { ITEMS } from './items';
 
 // ─── InventorySystem ──────────────────────────────────────────────────────────
 

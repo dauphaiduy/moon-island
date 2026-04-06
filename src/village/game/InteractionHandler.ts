@@ -1,9 +1,9 @@
-import type { ItemId } from '../types';
-import { ITEMS } from '../data/items';
-import { SceneKey } from '../constants';
+import type { ItemId } from '../../types';
+import { ITEMS } from '../../common/items';
+import { SceneKey } from '../../constants';
 import { TOOL_SHOP_CATALOG } from '../objects/ShopBuilding';
 import type { GameRuntime } from './createGameRuntime';
-import type { UIScene } from '../scenes/UIScene';
+import type { UIScene } from '../../scenes/UIScene';
 import type { DialogSystem } from '../systems/DialogSystem';
 import type { ToolId } from './gameTools';
 

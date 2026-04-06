@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
-import { FARMING, TILE_SIZE } from '../constants';
-import type { CropType, FarmTile, ItemId } from '../types';
+import { FARMING, TILE_SIZE } from '../../constants';
+import type { CropType, FarmTile, ItemId } from '../../types';
 
 // Which seed produces which crop
 const SEED_TO_CROP: Partial<Record<ItemId, ItemId>> = {

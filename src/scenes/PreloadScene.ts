@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { SceneKey, TextureKey, MapKey } from '../constants';
-import { TilemapLoader } from '../systems/TilemapLoader';
+import { TilemapLoader } from '../village/systems/TilemapLoader';
 
 export class PreloadScene extends Phaser.Scene {
   constructor() {

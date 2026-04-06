@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { TILE_SIZE } from '../constants';
+import { TILE_SIZE } from '../../constants';
 
 /** Tile coordinate of the boat — left side of Bridge - vertical at x=14 */
 export const BOAT_TILE_X = 13;

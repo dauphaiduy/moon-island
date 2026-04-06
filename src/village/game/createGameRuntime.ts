@@ -1,12 +1,12 @@
 import Phaser from 'phaser';
-import { TILE_SIZE } from '../constants';
+import { TILE_SIZE } from '../../constants';
 import { NPC_DEFS } from '../data/npcs';
 import { NPC } from '../objects/NPC';
-import { Player } from '../objects/Player';
+import { Player } from '../../common/Player';
 import { DayNightSystem } from '../systems/DayNightSystem';
 import { FarmingSystem } from '../systems/FarmingSystem';
 import { FishingSystem } from '../systems/FishingSystem';
-import { InventorySystem } from '../systems/InventorySystem';
+import { InventorySystem } from '../../common/InventorySystem';
 import { TilemapLoader } from '../systems/TilemapLoader';
 import { Boat } from '../objects/Boat';
 import { ShopBuilding } from '../objects/ShopBuilding';

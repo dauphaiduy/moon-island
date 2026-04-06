@@ -1,4 +1,4 @@
-import type { NpcDef } from '../types/npc';
+import type { NpcDef } from '../../types/npc';
 
 export const NPC_DEFS: NpcDef[] = [
   // ── Bà Lan — dân làng / quest giver ────────────────────────────────────────

@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { SceneKey } from '../constants';
+import { SceneKey } from '../../constants';
 import { GameSession } from '../game/GameSession';
 
 export class GameScene extends Phaser.Scene {

@@ -1,4 +1,4 @@
-import type { ItemId } from '../types';
+import type { ItemId } from '../../types';
 
 export interface DungeonLootEntry {
   itemId: ItemId;

@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
-import { TextureKey, TILE_SIZE } from '../constants';
-import type { NpcDef } from '../types/npc';
+import { TextureKey, TILE_SIZE } from '../../constants';
+import type { NpcDef } from '../../types/npc';
 import type { TimeOfDay } from '../systems/DayNightSystem';
 
 const WANDER_INTERVAL_MS = 3000;

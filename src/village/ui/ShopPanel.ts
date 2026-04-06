@@ -1,8 +1,8 @@
 import Phaser from 'phaser';
-import type { InventorySystem } from '../systems/InventorySystem';
-import type { ShopItem } from '../types/npc';
-import type { ItemId } from '../types';
-import { ITEMS } from '../data/items';
+import type { InventorySystem } from '../../common/InventorySystem';
+import type { ShopItem } from '../../types/npc';
+import type { ItemId } from '../../types';
+import { ITEMS } from '../../common/items';
 
 export class ShopPanel {
   private scene: Phaser.Scene;

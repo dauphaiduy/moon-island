@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import type { UIScene } from '../scenes/UIScene';
+import type { UIScene } from '../../scenes/UIScene';
 import { DialogSystem } from '../systems/DialogSystem';
 import type { GameRuntime } from './createGameRuntime';
 
