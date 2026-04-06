@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { SceneKey, TextureKey, MapKey, TILE_SIZE } from '../../constants';
-import { Player } from '../../common/Player';
+import { Player } from '../../common/objects/Player';
 import { ITEMS } from '../../common/data/items';
 import { DungeonLoot } from '../systems/DungeonLoot';
 import { TreasurePanel, type TreasureLootEntry } from '../ui/TreasurePanel';

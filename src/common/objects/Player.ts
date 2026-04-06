@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
-import { PLAYER_SPEED, TILE_SIZE } from '../constants';
-import { TextureKey } from '../constants';
-import type { Direction } from '../types';
+import { PLAYER_SPEED, TILE_SIZE } from '../../constants';
+import { TextureKey } from '../../constants';
+import type { Direction } from '../../types';
 
 // Spritesheet layout — player.png (128×128, 4 cols × 4 rows, 32×32 per frame)
 // row 0 = walk down  | row 1 = walk left

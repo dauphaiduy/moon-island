@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { TILE_SIZE } from '../../constants';
 import { NPC_DEFS } from '../data/npcs';
 import { NPC } from '../objects/NPC';
-import { Player } from '../../common/Player';
+import { Player } from '../../common/objects/Player';
 import { DayNightSystem } from '../systems/DayNightSystem';
 import { FarmingSystem } from '../systems/FarmingSystem';
 import { FishingSystem } from '../systems/FishingSystem';
