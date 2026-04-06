@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import type { UIScene } from '../../scenes/UIScene';
 import { DialogSystem } from '../systems/DialogSystem';
 import type { GameRuntime } from './createGameRuntime';
-import { FISH_NAME_MAP, ITEMS } from '../../common/items';
+import { FISH_NAME_MAP, ITEMS } from '../../common/data/items';
 
 interface BindRuntimeToUIParams {
   scene: Phaser.Scene;

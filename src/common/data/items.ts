@@ -1,4 +1,4 @@
-import type { ItemId, ItemDef } from '../types';
+import type { ItemId, ItemDef } from '../../types';
 
 export const ITEMS: Record<ItemId, ItemDef> = {
   // ── Food (harvested crops) ──────────────────────────────────────────────────

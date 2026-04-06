@@ -6,12 +6,12 @@ import { Player } from '../../common/Player';
 import { DayNightSystem } from '../systems/DayNightSystem';
 import { FarmingSystem } from '../systems/FarmingSystem';
 import { FishingSystem } from '../systems/FishingSystem';
-import { InventorySystem } from '../../common/InventorySystem';
+import { InventorySystem } from '../../common/systems/InventorySystem';
 import { TilemapLoader } from '../systems/TilemapLoader';
 import { Boat } from '../objects/Boat';
 import { ShopBuilding } from '../objects/ShopBuilding';
 import { DungeonEntrance } from '../objects/DungeonEntrance';
-import { XPSystem } from '../../common/XPSystem';
+import { XPSystem } from '../../common/systems/XPSystem';
 
 export interface GameRuntime {
   player: Player;

@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import type { NPC } from '../objects/NPC';
-import type { InventorySystem } from '../../common/InventorySystem';
-import { ITEMS } from '../../common/items';
+import type { InventorySystem } from '../../common/systems/InventorySystem';
+import { ITEMS } from '../../common/data/items';
 
 type DialogMode = 'dialog' | 'shop' | 'quest' | 'quest_complete' | 'closed';
 

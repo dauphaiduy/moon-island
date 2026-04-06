@@ -1,15 +1,15 @@
 import Phaser from 'phaser';
 import { SceneKey } from '../constants';
-import type { InventorySystem } from '../common/InventorySystem';
+import type { InventorySystem } from '../common/systems/InventorySystem';
 import type { DayNightState, TimeOfDay } from '../village/systems/DayNightSystem';
 import type { ShopItem } from '../types/npc';
 import type { ItemId } from '../types';
-import { PauseMenuPanel } from '../common/PauseMenuPanel';
-import { InventoryPanel } from '../common/InventoryPanel';
+import { PauseMenuPanel } from '../common/ui/PauseMenuPanel';
+import { InventoryPanel } from '../common/ui/InventoryPanel';
 import { ShopPanel } from '../village/ui/ShopPanel';
-import { ConfirmDialog } from '../common/ConfirmDialog';
+import { ConfirmDialog } from '../common/ui/ConfirmDialog';
 
-export type { PauseMenuAction } from '../common/PauseMenuPanel';
+export type { PauseMenuAction } from '../common/ui/PauseMenuPanel';
 
 const SLOT_SIZE   = 44;
 const SLOT_GAP    = 6;
@@ -51,7 +51,7 @@ export class UIScene extends Phaser.Scene {
   private confirm!:   ConfirmDialog;
 
   // ── Callbacks (wired by GameSession) ─────────────────────────────────────
-  onPauseAction?: (action: import('../common/PauseMenuPanel').PauseMenuAction) => void;
+  onPauseAction?: (action: import('../common/ui/PauseMenuPanel').PauseMenuAction) => void;
   onShopBuy?:     (itemId: ItemId, price: number) => void;
   onShopSell?:    (slotIndex: number) => void;
   onShopSellAll?: (slotIndex: number) => void;

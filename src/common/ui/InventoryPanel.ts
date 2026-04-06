@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import type { InventorySystem } from './InventorySystem';
+import type { InventorySystem } from '../systems/InventorySystem';
 
 const SLOT_SIZE = 44;
 const SLOT_GAP  = 6;

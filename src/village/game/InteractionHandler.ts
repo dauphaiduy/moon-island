@@ -1,5 +1,5 @@
 import type { ItemId } from '../../types';
-import { ITEMS } from '../../common/items';
+import { ITEMS } from '../../common/data/items';
 import { TOOL_SHOP_CATALOG } from '../objects/ShopBuilding';
 import type { GameRuntime } from './createGameRuntime';
 import type { UIScene } from '../../scenes/UIScene';
