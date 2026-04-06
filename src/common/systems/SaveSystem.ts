@@ -34,6 +34,12 @@ export interface SaveData {
   farmTiles: FarmTileSave[];
   npcFriendship: Record<string, number>;
   completedQuests: string[];
+  // ── Player stats ────────────────────────────────────────────────────────
+  statPoints?:      number;
+  statStrength?:    number;
+  statPhysical?:    number;
+  statStamina?:     number;
+  currentStamina?:  number;
 }
 
 // ─── Electron / localStorage bridge ──────────────────────────────────────────
@@ -117,6 +123,17 @@ export class SaveSystem {
       farmTiles,
       npcFriendship,
       completedQuests: dialog.getCompletedQuests(),
+      // Player stats
+      ...(() => {
+        const s = runtime.stats.getState();
+        return {
+          statPoints:     s.points,
+          statStrength:   s.strength,
+          statPhysical:   s.physical,
+          statStamina:    s.stamina,
+          currentStamina: s.currentStamina,
+        };
+      })(),
     };
 
     await write(data);
@@ -164,5 +181,14 @@ export class SaveSystem {
 
     // Completed quests
     dialog.loadCompletedQuests(data.completedQuests);
+
+    // Player stats
+    runtime.stats.loadState({
+      points:         data.statPoints     ?? 0,
+      strength:       data.statStrength   ?? 0,
+      physical:       data.statPhysical   ?? 0,
+      stamina:        data.statStamina    ?? 0,
+      currentStamina: data.currentStamina ?? 100,
+    });
   }
 }

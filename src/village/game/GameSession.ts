@@ -36,6 +36,7 @@ export class GameSession {
       save:            () => { void this.saveGame(); },
       togglePause:     () => this.togglePauseMenu(),
       toggleInventory: () => this.toggleInventory(),
+      toggleStats:     () => this.toggleStatsPanel(),
       numberKey: (n) => {
         if (this.dialog?.isOpen && n <= 3) { this.buyShopItem(n - 1); }
         else if (!this.dialog?.isOpen)     { this.runtime.inventory.setActiveSlot(n - 1); }
@@ -150,6 +151,8 @@ export class GameSession {
       const _prevNewDay = this.runtime.dayNight.onNewDay;
       this.runtime.dayNight.onNewDay = (day) => {
         _prevNewDay?.(day);
+        // Restore stamina at the start of each new day
+        this.runtime.stats.restoreStamina();
         void this.saveGame();
       };
 
@@ -158,7 +161,25 @@ export class GameSession {
         this.ui.setXP(this.runtime.xp.level, this.runtime.xp.xp, this.runtime.xp.xpToNext, this.runtime.xp.progress);
       };
       this.runtime.xp.onLevelUp = (level) => {
-        this.ui.notify(`🎉 Lên cấp ${level}! +5 sức mạnh ✨`, '#ffcc00');
+        this.runtime.stats.addPoint();
+        this.ui.notify(`🎉 Lên cấp ${level}! +1 điểm thuộc tính ✨`, '#ffcc00');
+        this.ui.refreshStatsPanel(this.runtime.stats);
+      };
+
+      // Stats panel: spending a point
+      this.ui.onStatSpend = (stat) => {
+        const spent = this.runtime.stats.spendPoint(stat);
+        if (!spent) { this.ui.notify('⚠️ Không có điểm!', '#e74c3c'); return; }
+        this.ui.refreshStatsPanel(this.runtime.stats);
+        const s = this.runtime.stats;
+        this.ui.setStamina(s.currentStamina, s.maxStamina);
+      };
+
+      // Stamina bar updates
+      this.runtime.stats.onStaminaChange = () => {
+        const s = this.runtime.stats;
+        this.ui.setStamina(s.currentStamina, s.maxStamina);
+        this.ui.refreshStatsPanel(s);
       };
 
       this.loadSave();
@@ -195,8 +216,15 @@ export class GameSession {
   }
 
   private advanceHour(): void {
-    const state = this.runtime.dayNight.state;
-    this.runtime.dayNight.setTime((state.hour + 1) % 24);
+    const { hour, day } = this.runtime.dayNight.state;
+    const nextHour = (hour + 1) % 24;
+    if (nextHour === 0) {
+      // Wrap past midnight: advance the day counter, then fire onNewDay
+      this.runtime.dayNight.loadState(day + 1, 0);
+      this.runtime.dayNight.onNewDay?.(day + 1);
+    } else {
+      this.runtime.dayNight.setTime(nextHour);
+    }
   }
 
   private buyShopItem(index: number): void {
@@ -214,6 +242,8 @@ export class GameSession {
     if (this.ui.isConfirmOpen) { this.ui.closeConfirm(); return; }
     // ESC also closes shop panel if open
     if (this.ui.isShopPanelOpen) { this.ui.closeShopPanel(); return; }
+    // ESC also closes stats panel if open
+    if (this.ui.isStatsPanelOpen) { this.ui.closeStatsPanel(); return; }
     // ESC also closes inventory if open
     if (this.ui.isInventoryOpen) { this.ui.closeInventoryPanel(); return; }
     this.ui.togglePauseMenu();
@@ -226,6 +256,13 @@ export class GameSession {
     this.ui.toggleInventoryPanel(this.runtime.inventory);
   }
 
+  private toggleStatsPanel(): void {
+    if (this.dialog?.isOpen) return;
+    if (this.ui.isPauseMenuOpen) return;
+    if (this.ui.isShopPanelOpen) return;
+    this.ui.toggleStatsPanel(this.runtime.stats);
+  }
+
   private loadSave(): void {
     // Drain any loot collected in the dungeon before applying the save
     this.applyDungeonLoot();
@@ -234,8 +271,10 @@ export class GameSession {
       if (!data || !this.dialog) return;
       SaveSystem.apply(data, this.runtime, this.dialog);
       // Refresh XP bar with loaded state (loadState doesn’t fire onXPChange)
-      this.ui.setXP(this.runtime.xp.level, this.runtime.xp.xp, this.runtime.xp.xpToNext, this.runtime.xp.progress);
-      this.ui.notify('💾 Đã tải game!');
+      this.ui.setXP(this.runtime.xp.level, this.runtime.xp.xp, this.runtime.xp.xpToNext, this.runtime.xp.progress);      // Refresh stamina bar with loaded state
+      const s = this.runtime.stats;
+      this.ui.setStamina(s.currentStamina, s.maxStamina);
+      this.ui.refreshStatsPanel(s);      this.ui.notify('💾 Đã tải game!');
     });
   }
 
@@ -265,6 +304,9 @@ export class GameSession {
     }
     SaveSystem.apply(data, this.runtime, this.dialog);
     this.ui.setXP(this.runtime.xp.level, this.runtime.xp.xp, this.runtime.xp.xpToNext, this.runtime.xp.progress);
+    const s = this.runtime.stats;
+    this.ui.setStamina(s.currentStamina, s.maxStamina);
+    this.ui.refreshStatsPanel(s);
     this.ui.notify('💾 Đã tải game!');
   }
 

@@ -9,6 +9,7 @@ export interface InputCallbacks {
   save:            () => void;
   togglePause:     () => void;
   toggleInventory: () => void;
+  toggleStats:     () => void;
   /** Called with the 1-based key number (1–8). */
   numberKey:       (n: number) => void;
 }
@@ -37,6 +38,7 @@ export class InputController {
     kb.on('keydown-F5',  callbacks.save);
     kb.on('keydown-ESC', callbacks.togglePause);
     kb.on('keydown-I',   callbacks.toggleInventory);
+    kb.on('keydown-P',   callbacks.toggleStats);
 
     this.numberHandlers = [1, 2, 3, 4, 5, 6, 7, 8].map((n) => {
       const handler = () => callbacks.numberKey(n);
@@ -55,6 +57,7 @@ export class InputController {
     kb.off('keydown-F5',  this.callbacks.save);
     kb.off('keydown-ESC', this.callbacks.togglePause);
     kb.off('keydown-I',   this.callbacks.toggleInventory);
+    kb.off('keydown-P',   this.callbacks.toggleStats);
 
     this.numberHandlers.forEach((handler, index) => {
       kb.off(`keydown-${NUMBER_KEY_NAMES[index]}`, handler);

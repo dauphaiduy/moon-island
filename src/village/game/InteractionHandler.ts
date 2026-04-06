@@ -5,6 +5,7 @@ import type { GameRuntime } from './createGameRuntime';
 import type { UIScene } from '../../scenes/UIScene';
 import type { DialogSystem } from '../systems/DialogSystem';
 import type { ToolId } from './gameTools';
+import { STAMINA_COSTS } from '../../common/systems/PlayerStatsSystem';
 
 
 /**
@@ -85,23 +86,35 @@ export class InteractionHandler {
     switch (this.currentTool) {
       case 'hoe': {
         if (zone !== 'farm') break;
-        // Harvest fully grown crops first
-        const harvested = this.runtime.farming.harvest(tileX, tileY);
-        if (harvested) {
+        const hoeTile = this.runtime.farming.getTile(tileX, tileY);
+
+        if (hoeTile?.state === 'grown') {
+          // ── Harvest ──────────────────────────────────────────────────────
           if (this.runtime.inventory.isFull()) {
             this.ui.notify('⚠️ Túi đồ đầy!', '#e67e22');
             break;
           }
-          this.runtime.player.playAction('hoe');
-          this.runtime.inventory.add(harvested, 1);
-          this.runtime.xp.add(ITEMS[harvested].xp ?? 10);
-          this.ui.notify(`✅ Thu hoạch ${ITEMS[harvested].emoji} ${ITEMS[harvested].name}!`);
-          break;
-        }
-        // Otherwise till the soil
-        if (this.runtime.farming.till(tileX, tileY)) {
-          this.runtime.player.playAction('hoe');
-          this.ui.notify('🌱 Đã cày đất');
+          if (!this.runtime.stats.useStamina(STAMINA_COSTS.harvest)) {
+            this.ui.notify('⚠️ Hết thể lực!', '#e74c3c');
+            break;
+          }
+          const harvested = this.runtime.farming.harvest(tileX, tileY);
+          if (harvested) {
+            this.runtime.player.playAction('hoe');
+            this.runtime.inventory.add(harvested, 1);
+            this.runtime.xp.add(ITEMS[harvested].xp ?? 10);
+            this.ui.notify(`✅ Thu hoạch ${ITEMS[harvested].emoji} ${ITEMS[harvested].name}!`);
+          }
+        } else if (!hoeTile) {
+          // ── Till raw farm soil ────────────────────────────────────────────
+          if (!this.runtime.stats.useStamina(STAMINA_COSTS.hoe)) {
+            this.ui.notify('⚠️ Hết thể lực!', '#e74c3c');
+            break;
+          }
+          if (this.runtime.farming.till(tileX, tileY)) {
+            this.runtime.player.playAction('hoe');
+            this.ui.notify('🌱 Đã cày đất');
+          }
         }
         break;
       }
@@ -116,6 +129,10 @@ export class InteractionHandler {
           const seedIds: ItemId[] = ['seed_wheat', 'seed_carrot', 'seed_tomato'];
           const seed = seedIds.find(id => this.runtime.inventory.count(id) > 0);
           if (seed) {
+            if (!this.runtime.stats.useStamina(STAMINA_COSTS.plant)) {
+              this.ui.notify('⚠️ Hết thể lực!', '#e74c3c');
+              break;
+            }
             const cropId = this.runtime.farming.plantSeed(tileX, tileY, seed);
             if (cropId) {
               this.runtime.player.playAction('plant');
@@ -125,25 +142,41 @@ export class InteractionHandler {
             }
           }
           // No seeds — just water the soil
-          if (this.runtime.farming.water(tileX, tileY)) {
-            this.runtime.player.playAction('water');
-            this.ui.notify('💧 Đã tưới đất');
+          if (!tile.watered) {
+            if (!this.runtime.stats.useStamina(STAMINA_COSTS.water)) {
+              this.ui.notify('⚠️ Hết thể lực!', '#e74c3c');
+              break;
+            }
+            if (this.runtime.farming.water(tileX, tileY)) {
+              this.runtime.player.playAction('water');
+              this.ui.notify('💧 Đã tưới đất');
+            }
           }
           break;
         }
 
         // On seeded soil: water to continue growth
+        if (tile.watered) {
+          this.ui.notify('💧 Đã tưới rồi hôm nay');
+          break;
+        }
+        if (!this.runtime.stats.useStamina(STAMINA_COSTS.water)) {
+          this.ui.notify('⚠️ Hết thể lực!', '#e74c3c');
+          break;
+        }
         if (this.runtime.farming.water(tileX, tileY)) {
           this.runtime.player.playAction('water');
           this.ui.notify('💧 Đã tưới cây');
-        } else if (tile.watered) {
-          this.ui.notify('💧 Đã tưới rồi hôm nay');
         }
         break;
       }
 
       case 'fishingRod':
         if (!this.runtime.fishing.isActive && zone === 'water') {
+          if (!this.runtime.stats.useStamina(STAMINA_COSTS.fishing)) {
+            this.ui.notify('⚠️ Hết thể lực!', '#e74c3c');
+            break;
+          }
           this.runtime.player.playAction('fishing');
           this.runtime.fishing.cast();
           break;

@@ -12,6 +12,7 @@ import { Boat } from '../objects/Boat';
 import { ShopBuilding } from '../objects/ShopBuilding';
 import { DungeonEntrance } from '../objects/DungeonEntrance';
 import { XPSystem } from '../../common/systems/XPSystem';
+import { PlayerStatsSystem } from '../../common/systems/PlayerStatsSystem';
 
 export interface GameRuntime {
   player: Player;
@@ -26,6 +27,7 @@ export interface GameRuntime {
   dayNight: DayNightSystem;
   overlay: Phaser.GameObjects.Rectangle;
   xp: XPSystem;
+  stats: PlayerStatsSystem;
 }
 
 export function createGameRuntime(scene: Phaser.Scene): GameRuntime {
@@ -37,7 +39,8 @@ export function createGameRuntime(scene: Phaser.Scene): GameRuntime {
   const fishing = new FishingSystem(scene);
   const inventory = new InventorySystem();
   const dayNight = new DayNightSystem();
-  const xp = new XPSystem();
+  const xp      = new XPSystem();
+  const stats    = new PlayerStatsSystem();
 
   // Give the player starter tools (slots 0–2) then seeds (slots 3–5)
   inventory.add('tool_hoe', 1);
@@ -91,5 +94,6 @@ export function createGameRuntime(scene: Phaser.Scene): GameRuntime {
     dayNight,
     overlay,
     xp,
+    stats,
   };
 }

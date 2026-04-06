@@ -8,6 +8,8 @@ import { PauseMenuPanel } from '../common/ui/PauseMenuPanel';
 import { InventoryPanel } from '../common/ui/InventoryPanel';
 import { ShopPanel } from '../village/ui/ShopPanel';
 import { ConfirmDialog } from '../common/ui/ConfirmDialog';
+import { StatsPanel } from '../common/ui/StatsPanel';
+import type { PlayerStatsSystem } from '../common/systems/PlayerStatsSystem';
 
 export type { PauseMenuAction } from '../common/ui/PauseMenuPanel';
 
@@ -44,17 +46,23 @@ export class UIScene extends Phaser.Scene {
   private xpBarFill!:  Phaser.GameObjects.Rectangle;
   private xpHintText!: Phaser.GameObjects.Text;
 
+  // ── Stamina ────────────────────────────────────────────────────────────────
+  private staminaBarFill!:  Phaser.GameObjects.Rectangle;
+  private staminaHudText!:  Phaser.GameObjects.Text;
+
   // ── Panels ────────────────────────────────────────────────────────────────
   private pauseMenu!: PauseMenuPanel;
   private inventory!: InventoryPanel;
   private shop!:      ShopPanel;
   private confirm!:   ConfirmDialog;
+  private statsPanel!: StatsPanel;
 
   // ── Callbacks (wired by GameSession) ─────────────────────────────────────
   onPauseAction?: (action: import('../common/ui/PauseMenuPanel').PauseMenuAction) => void;
   onShopBuy?:     (itemId: ItemId, price: number) => void;
   onShopSell?:    (slotIndex: number) => void;
   onShopSellAll?: (slotIndex: number) => void;
+  onStatSpend?:   (stat: 'strength' | 'physical' | 'stamina') => void;
 
   constructor() {
     super({ key: SceneKey.UI });
@@ -112,6 +120,28 @@ export class UIScene extends Phaser.Scene {
     this.xpHintText = this.add.text(xpRx, xpTy + 28, '0 XP → Lv.2', {
       fontSize: '9px', color: '#7799bb',
     }).setOrigin(1, 0);
+
+    // ── Stamina bar (top-right, below XP bar) ──────────────────────────────
+    const stBarW = 88;
+    const stRx   = W - 12;
+    const stTy   = xpTy + 42;
+
+    this.add.text(stRx, stTy, '💪 Thể lực', {
+      fontSize: '11px', color: '#99ddbb',
+      backgroundColor: '#00000066',
+      padding: { x: 5, y: 3 },
+    }).setOrigin(1, 0);
+
+    this.add.rectangle(stRx, stTy + 20, stBarW, 6, 0x113322, 0.9)
+      .setOrigin(1, 0)
+      .setStrokeStyle(1, 0x337755, 0.8);
+
+    this.staminaBarFill = this.add.rectangle(stRx - stBarW + 1, stTy + 20, stBarW, 6, 0x44cc88, 1)
+      .setOrigin(0, 0);
+
+    this.staminaHudText = this.add.text(stRx, stTy + 28, '100 / 100', {
+      fontSize: '9px', color: '#55aa77',
+    }).setOrigin(1, 0);
     // ── Fishing status ───────────────────────────────────────────────────────
     this.fishingText = this.add.text(W / 2, 64, '', {
       fontSize: '15px', color: '#ffe066',
@@ -132,7 +162,7 @@ export class UIScene extends Phaser.Scene {
     this.buildHotbar(hotbarX, hotbarY);
 
     // ── Hint ─────────────────────────────────────────────────────────────────
-    this.add.text(W / 2, H - 4, 'Tab: công cụ  |  E: tương tác  |  I: túI đồ  |  Q: bán tất cả  |  ESC: menu', {
+    this.add.text(W / 2, H - 4, 'Tab: công cụ  |  E: tương tác  |  I: túi đồ  |  P: nhân vật  |  Q: bán tất cả  |  ESC: menu', {
       fontSize: '10px', color: '#ffffff55',
     }).setOrigin(0.5, 1);
 
@@ -148,6 +178,9 @@ export class UIScene extends Phaser.Scene {
     this.shop.onSellAll = (si) => this.onShopSellAll?.(si);
 
     this.confirm = new ConfirmDialog(this, W, H);
+
+    this.statsPanel = new StatsPanel(this, W, H);
+    this.statsPanel.onSpend = (stat) => this.onStatSpend?.(stat);
   }
 
   // ─── Hotbar ──────────────────────────────────────────────────────────────────
@@ -238,6 +271,16 @@ export class UIScene extends Phaser.Scene {
     void xp; // xp total stored in XPSystem, not needed here for display
   }
 
+  setStamina(current: number, max: number): void {
+    const barW = 88;
+    const fill = max > 0 ? Math.round((current / max) * barW) : 0;
+    this.staminaBarFill.setSize(fill, 6);
+    const pct   = max > 0 ? current / max : 0;
+    const color = pct > 0.5 ? 0x44cc88 : pct > 0.25 ? 0xffaa33 : 0xff4444;
+    this.staminaBarFill.setFillStyle(color, 1);
+    this.staminaHudText.setText(`${current} / ${max}`);
+  }
+
   setFishingStatus(text: string): void {
     this.fishingText.setText(text);
   }
@@ -271,6 +314,20 @@ export class UIScene extends Phaser.Scene {
   get isConfirmOpen(): boolean { return this.confirm.isOpen; }
   openConfirm(message: string, onConfirm: () => void): void { this.confirm.open(message, onConfirm); }
   closeConfirm(): void { this.confirm.close(); }
+
+  get isStatsPanelOpen(): boolean { return this.statsPanel.isOpen; }
+  toggleStatsPanel(stats: PlayerStatsSystem): void {
+    if (this.statsPanel.isOpen) {
+      this.statsPanel.close();
+    } else {
+      this.statsPanel.refresh(stats);
+      this.statsPanel.open();
+    }
+  }
+  closeStatsPanel(): void { this.statsPanel.close(); }
+  refreshStatsPanel(stats: PlayerStatsSystem): void {
+    if (this.statsPanel.isOpen) this.statsPanel.refresh(stats);
+  }
 
   /** Start a new scene, properly shutting down GameScene (which cascades to stop UIScene). */
   startScene(key: string): void {
