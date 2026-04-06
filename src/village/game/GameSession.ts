@@ -82,6 +82,12 @@ export class GameSession {
       this.runtime.dungeonEntrance.hideBubble();
     }
 
+    if (this.runtime.tent.isNearPlayer(px, py)) {
+      this.runtime.tent.highlightBubble(this.scene);
+    } else {
+      this.runtime.tent.hideBubble();
+    }
+
     if (this.runtime.player.interactJustPressed) {
       this.interact.handle();
     }

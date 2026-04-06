@@ -68,6 +68,15 @@ export class InteractionHandler {
       return;
     }
 
+    // ── Tent — sleep to next day ───────────────────────────────────────────────
+    if (this.runtime.tent.isNearPlayer(this.runtime.player.x, this.runtime.player.y)) {
+      const nextDay = this.runtime.dayNight.state.day + 1;
+      this.runtime.dayNight.sleepToNextDay();
+      this.runtime.stats.restoreStamina();
+      this.ui.notify(`😴 Ngủ ngon... Ngày ${nextDay} bắt đầu lúc 06:00!`, '#c8e6ff');
+      return;
+    }
+
     // ── NPC interaction ────────────────────────────────────────────────────────
     const nearby = this.findNearbyNpc();
     if (nearby) {

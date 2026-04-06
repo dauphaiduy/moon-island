@@ -79,6 +79,15 @@ export class DayNightSystem {
     }
   }
 
+  /** Skip to the next day at 06:00 — fires onNewDay then onTimeChange */
+  sleepToNextDay(): void {
+    this._day++;
+    this._minute = 6 * 60;   // 6:00 am
+    this._accMs  = 0;
+    this.onNewDay?.(this._day);
+    this.onTimeChange?.(this.state);
+  }
+
   // Force a specific time (useful for testing)
   setTime(hour: number, minute = 0): void {
     this._minute = Math.max(0, Math.min(23 * 60 + 59, hour * 60 + minute));
