@@ -92,6 +92,7 @@ export class InteractionHandler {
             this.ui.notify('⚠️ Túi đồ đầy!', '#e67e22');
             break;
           }
+          this.runtime.player.playAction('hoe');
           this.runtime.inventory.add(harvested, 1);
           this.runtime.xp.add(ITEMS[harvested].xp ?? 10);
           this.ui.notify(`✅ Thu hoạch ${ITEMS[harvested].emoji} ${ITEMS[harvested].name}!`);
@@ -99,6 +100,7 @@ export class InteractionHandler {
         }
         // Otherwise till the soil
         if (this.runtime.farming.till(tileX, tileY)) {
+          this.runtime.player.playAction('hoe');
           this.ui.notify('🌱 Đã cày đất');
         }
         break;
@@ -116,6 +118,7 @@ export class InteractionHandler {
           if (seed) {
             const cropId = this.runtime.farming.plantSeed(tileX, tileY, seed);
             if (cropId) {
+              this.runtime.player.playAction('plant');
               this.runtime.inventory.removeByIdAndQty(seed, 1);
               this.ui.notify(`🌾 Đã gieo ${ITEMS[seed].emoji} ${ITEMS[seed].name}`);
               break;
@@ -123,6 +126,7 @@ export class InteractionHandler {
           }
           // No seeds — just water the soil
           if (this.runtime.farming.water(tileX, tileY)) {
+            this.runtime.player.playAction('water');
             this.ui.notify('💧 Đã tưới đất');
           }
           break;
@@ -130,6 +134,7 @@ export class InteractionHandler {
 
         // On seeded soil: water to continue growth
         if (this.runtime.farming.water(tileX, tileY)) {
+          this.runtime.player.playAction('water');
           this.ui.notify('💧 Đã tưới cây');
         } else if (tile.watered) {
           this.ui.notify('💧 Đã tưới rồi hôm nay');
@@ -139,6 +144,7 @@ export class InteractionHandler {
 
       case 'fishingRod':
         if (!this.runtime.fishing.isActive && zone === 'water') {
+          this.runtime.player.playAction('fishing');
           this.runtime.fishing.cast();
           break;
         }

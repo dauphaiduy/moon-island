@@ -18,6 +18,7 @@ const FRAME_RATE = 8; // frames per second while walking
 export class Player extends Phaser.GameObjects.Container {
   private _direction: Direction = 'down';
   private _isMoving = false;
+  private _isDoingAction = false;
   private sprite!: Phaser.GameObjects.Sprite;
   private keys!: {
     up:       Phaser.Input.Keyboard.Key;
@@ -53,10 +54,11 @@ export class Player extends Phaser.GameObjects.Container {
     };
 
     Player.createAnims(scene);
+    Player.createFarmingAnims(scene);
     this.sprite.play('idle-down');
   }
 
-  // ─── Static: register animations once per scene ────────────────────────────
+  // ─── Static: register walk / idle animations once per scene ───────────────────
 
   static createAnims(scene: Phaser.Scene): void {
     if (scene.anims.exists('walk-down')) return; // already registered
@@ -83,6 +85,45 @@ export class Player extends Phaser.GameObjects.Container {
         repeat: 0,
       });
     }
+  }
+
+  // ─── Static: register farming action animations once per scene ───────────
+
+  static createFarmingAnims(scene: Phaser.Scene): void {
+    if (scene.anims.exists('farm-hoe')) return;
+
+    const COLS = 4;
+    const FRAME_RATE_ACTION = 8;
+    const actions: Array<['hoe' | 'water' | 'plant' | 'fishing', number]> = [
+      ['hoe',     0],
+      ['water',   1],
+      ['plant',   2],
+      ['fishing', 3],
+    ];
+
+    for (const [action, row] of actions) {
+      scene.anims.create({
+        key: `farm-${action}`,
+        frames: scene.anims.generateFrameNumbers(TextureKey.PlayerFarming, {
+          start: row * COLS,
+          end:   row * COLS + 3,
+        }),
+        frameRate: FRAME_RATE_ACTION,
+        repeat: 0,
+      });
+    }
+  }
+
+  // ─── Play a one-shot farming action animation then return to idle ─────────
+
+  playAction(action: 'hoe' | 'water' | 'plant' | 'fishing'): void {
+    if (this._isDoingAction) return;
+    this._isDoingAction = true;
+    this.sprite.play(`farm-${action}`);
+    this.sprite.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => {
+      this._isDoingAction = false;
+      this.sprite.play(`idle-${this._direction}`);
+    });
   }
 
   // ─── Getters ────────────────────────────────────────────────────────────────
@@ -137,6 +178,7 @@ export class Player extends Phaser.GameObjects.Container {
   }
 
   private playAnim(wasMoving: boolean, dirChanged: boolean): void {
+    if (this._isDoingAction) return;
     if (this._isMoving) {
       // Only restart the anim if direction changed or we just started moving
       if (dirChanged || !wasMoving) {
