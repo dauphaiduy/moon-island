@@ -16,7 +16,7 @@ const SPAWN_TILE_Y = 11;
  * 'door'   — exit/entrance tiles (Doors layer)
  * 'none'   — wall, decoration, or passable floor with no special interaction
  */
-export type DungeonZone = 'trap' | 'pickup' | 'door' | 'none';
+export type DungeonZone = 'trap' | 'pickup' | 'door' | 'level_up' | 'none';
 
 /**
  * Per-layer configuration for the dungeon map.
@@ -32,7 +32,7 @@ const LAYER_CONFIG: Array<{ name: string; collides: boolean; zone?: DungeonZone 
   { name: 'Walls pillars',  collides: true                           },
   { name: 'Traps',          collides: false, zone: 'trap'            },
   { name: 'Pickups',        collides: false, zone: 'pickup'          },
-  { name: 'Next Level',     collides: false, zone: 'pickup'          },
+  { name: 'Next Level',     collides: false, zone: 'level_up'        },
   { name: 'Miscs',          collides: false                          },
   { name: 'Doors',          collides: true,  zone: 'door'            },
 ];
