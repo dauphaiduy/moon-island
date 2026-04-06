@@ -2,15 +2,15 @@ import type { ItemId, ItemDef } from '../types';
 
 export const ITEMS: Record<ItemId, ItemDef> = {
   // ── Food (harvested crops) ──────────────────────────────────────────────────
-  crop_wheat:   { id: 'crop_wheat',   name: 'Lúa mì',      emoji: '🌾', maxStack: 99, category: 'food', rarity: 'common',   sellPrice: 20  },
-  crop_carrot:  { id: 'crop_carrot',  name: 'Cà rốt',      emoji: '🥕', maxStack: 99, category: 'food', rarity: 'common',   sellPrice: 35  },
-  crop_tomato:  { id: 'crop_tomato',  name: 'Cà chua',     emoji: '🍅', maxStack: 99, category: 'food', rarity: 'uncommon', sellPrice: 50  },
+  crop_wheat:   { id: 'crop_wheat',   name: 'Lúa mì',      emoji: '🌾', maxStack: 99, category: 'food', rarity: 'common',   sellPrice: 20,  xp:  8  },
+  crop_carrot:  { id: 'crop_carrot',  name: 'Cà rốt',      emoji: '🥕', maxStack: 99, category: 'food', rarity: 'common',   sellPrice: 35,  xp: 12  },
+  crop_tomato:  { id: 'crop_tomato',  name: 'Cà chua',     emoji: '🍅', maxStack: 99, category: 'food', rarity: 'uncommon', sellPrice: 50,  xp: 20  },
 
   // ── Fish ────────────────────────────────────────────────────────────────────
-  fish_carp:    { id: 'fish_carp',    name: 'Cá chép',     emoji: '🐟', maxStack: 30, category: 'fish', rarity: 'common',   sellPrice: 40  },
-  fish_bass:    { id: 'fish_bass',    name: 'Cá rô',       emoji: '🐠', maxStack: 30, category: 'fish', rarity: 'uncommon', sellPrice: 55  },
-  fish_catfish: { id: 'fish_catfish', name: 'Cá trê',      emoji: '🐡', maxStack: 30, category: 'fish', rarity: 'uncommon', sellPrice: 60  },
-  fish_rare:    { id: 'fish_rare',    name: 'Cá vàng',     emoji: '✨', maxStack: 10, category: 'fish', rarity: 'rare',     sellPrice: 250, description: 'Một con cá vàng huyền thoại, rất khó bắt.' },
+  fish_carp:    { id: 'fish_carp',    name: 'Cá chép',     emoji: '🐟', maxStack: 30, category: 'fish', rarity: 'common',   sellPrice: 40,  xp: 15  },
+  fish_bass:    { id: 'fish_bass',    name: 'Cá rô',       emoji: '🐠', maxStack: 30, category: 'fish', rarity: 'uncommon', sellPrice: 55,  xp: 25  },
+  fish_catfish: { id: 'fish_catfish', name: 'Cá trê',      emoji: '🐡', maxStack: 30, category: 'fish', rarity: 'uncommon', sellPrice: 60,  xp: 28  },
+  fish_rare:    { id: 'fish_rare',    name: 'Cá vàng',     emoji: '✨', maxStack: 10, category: 'fish', rarity: 'rare',     sellPrice: 250, xp: 60, description: 'Một con cá vàng huyền thoại, rất khó bắt.' },
 
   // ── Seeds ───────────────────────────────────────────────────────────────────
   seed_wheat:   { id: 'seed_wheat',   name: 'Hạt lúa',     emoji: '🌱', maxStack: 99, category: 'seed', rarity: 'common',   sellPrice: 5   },

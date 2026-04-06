@@ -10,13 +10,8 @@ function cumulativeXP(targetLevel: number): number {
   return total;
 }
 
-// ─── XP sources (informational, for callers) ─────────────────────────────────
+// ─── Dungeon loot XP (flat per item) ────────────────────────────────────────
 export const XP_GRANTS = {
-  TILL:         2,
-  PLANT:        5,
-  WATER:        1,
-  HARVEST:     15,
-  FISH_CATCH:  25,
   DUNGEON_LOOT: 30,
 } as const;
 

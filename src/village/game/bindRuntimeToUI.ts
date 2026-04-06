@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import type { UIScene } from '../../scenes/UIScene';
 import { DialogSystem } from '../systems/DialogSystem';
 import type { GameRuntime } from './createGameRuntime';
-import { XP_GRANTS } from '../../common/XPSystem';
+import { FISH_NAME_MAP, ITEMS } from '../../common/items';
 
 interface BindRuntimeToUIParams {
   scene: Phaser.Scene;
@@ -31,8 +31,10 @@ export function bindRuntimeToUI({ scene, runtime, ui }: BindRuntimeToUIParams): 
   runtime.fishing.onCatch = (fish) => {
     const added = runtime.inventory.addFish(fish);
     if (added) {
+      const fishId = FISH_NAME_MAP[fish];
+      const xp = fishId ? (ITEMS[fishId]?.xp ?? 15) : 15;
       ui.notify(`🐟 Bắt được: ${fish}!`);
-      runtime.xp.add(XP_GRANTS.FISH_CATCH);
+      runtime.xp.add(xp);
     }
     else ui.notify(`🐟 ${fish} - túi đồ đầy!`, '#e67e22');
   };

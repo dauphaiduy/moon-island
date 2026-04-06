@@ -73,6 +73,7 @@ export interface ItemDef {
   rarity:       ItemRarity;
   sellPrice:    number;
   tier?:        number;       // tool upgrade level (1 = base, 2 = iron, …)
+  xp?:          number;       // XP granted to player on harvest / catch
   description?: string;       // flavor text shown in inventory tooltip
 }
 

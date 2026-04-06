@@ -1,12 +1,11 @@
 import type { ItemId } from '../../types';
 import { ITEMS } from '../../common/items';
-import { SceneKey } from '../../constants';
 import { TOOL_SHOP_CATALOG } from '../objects/ShopBuilding';
 import type { GameRuntime } from './createGameRuntime';
 import type { UIScene } from '../../scenes/UIScene';
 import type { DialogSystem } from '../systems/DialogSystem';
 import type { ToolId } from './gameTools';
-import { XP_GRANTS } from '../../common/XPSystem';
+
 
 /**
  * Handles all E-key interaction logic: dialog, shop, NPC, and tile-tool actions.
@@ -94,13 +93,12 @@ export class InteractionHandler {
             break;
           }
           this.runtime.inventory.add(harvested, 1);
-          this.runtime.xp.add(XP_GRANTS.HARVEST);
+          this.runtime.xp.add(ITEMS[harvested].xp ?? 10);
           this.ui.notify(`✅ Thu hoạch ${ITEMS[harvested].emoji} ${ITEMS[harvested].name}!`);
           break;
         }
         // Otherwise till the soil
         if (this.runtime.farming.till(tileX, tileY)) {
-          this.runtime.xp.add(XP_GRANTS.TILL);
           this.ui.notify('🌱 Đã cày đất');
         }
         break;
@@ -119,14 +117,12 @@ export class InteractionHandler {
             const cropId = this.runtime.farming.plantSeed(tileX, tileY, seed);
             if (cropId) {
               this.runtime.inventory.removeByIdAndQty(seed, 1);
-              this.runtime.xp.add(XP_GRANTS.PLANT);
               this.ui.notify(`🌾 Đã gieo ${ITEMS[seed].emoji} ${ITEMS[seed].name}`);
               break;
             }
           }
           // No seeds — just water the soil
           if (this.runtime.farming.water(tileX, tileY)) {
-            this.runtime.xp.add(XP_GRANTS.WATER);
             this.ui.notify('💧 Đã tưới đất');
           }
           break;
@@ -134,7 +130,6 @@ export class InteractionHandler {
 
         // On seeded soil: water to continue growth
         if (this.runtime.farming.water(tileX, tileY)) {
-          this.runtime.xp.add(XP_GRANTS.WATER);
           this.ui.notify('💧 Đã tưới cây');
         } else if (tile.watered) {
           this.ui.notify('💧 Đã tưới rồi hôm nay');
