@@ -63,6 +63,7 @@ export class UIScene extends Phaser.Scene {
   onShopSell?:    (slotIndex: number) => void;
   onShopSellAll?: (slotIndex: number) => void;
   onStatSpend?:   (stat: 'strength' | 'physical' | 'stamina') => void;
+  onInventoryUse?: (slotIndex: number) => void;
 
   constructor() {
     super({ key: SceneKey.UI });
@@ -302,7 +303,10 @@ export class UIScene extends Phaser.Scene {
   togglePauseMenu():                void { this.pauseMenu.toggle(); }
   closePauseMenu():                 void { this.pauseMenu.close(); }
 
-  toggleInventoryPanel(inventory: InventorySystem): void { this.inventory.toggle(inventory); }
+  toggleInventoryPanel(inventory: InventorySystem): void {
+    this.inventory.onUse = (si) => this.onInventoryUse?.(si);
+    this.inventory.toggle(inventory);
+  }
   closeInventoryPanel():            void { this.inventory.close(); }
   refreshInventoryPanel(inventory: InventorySystem): void { this.inventory.refresh(inventory); }
 

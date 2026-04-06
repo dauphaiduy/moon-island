@@ -121,6 +121,17 @@ export class InteractionHandler {
     const { tileX, tileY } = this.runtime.player.facingTile;
     const zone = this.runtime.tilemap.getZone(tileX, tileY);
 
+    // ── Food — use from hotbar ─────────────────────────────────────────────────
+    const activeIdx  = this.runtime.inventory.getActiveSlot();
+    const activeSlot = this.runtime.inventory.getSlot(activeIdx);
+    if (activeSlot && ITEMS[activeSlot.item.id]?.staminaRestore) {
+      const restore = ITEMS[activeSlot.item.id].staminaRestore!;
+      this.runtime.inventory.remove(activeIdx, 1);
+      this.runtime.stats.addStamina(restore);
+      this.ui.notify(`${activeSlot.item.emoji} Dùng ${activeSlot.item.name} → +${restore} thể lực!`, '#80ff80');
+      return;
+    }
+
     switch (this.currentTool) {
       case "hoe": {
         if (zone !== "farm") break;

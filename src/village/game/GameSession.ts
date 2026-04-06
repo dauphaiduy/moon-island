@@ -131,11 +131,18 @@ export class GameSession {
           return;
         }
         this.ui.notify(`🛒 Đã mua ${ITEMS[itemId].emoji} ${ITEMS[itemId].name}!`);
-        const staminaRestore = ITEMS[itemId].staminaRestore;
-        if (staminaRestore) {
-          this.runtime.stats.addStamina(staminaRestore);
-          this.ui.notify(`❤️ Phục hồi ${staminaRestore} thể lực!`);
-        }
+      };
+
+      // Inventory use callback (food items)
+      this.ui.onInventoryUse = (slotIndex) => {
+        const slot = this.runtime.inventory.getSlot(slotIndex);
+        if (!slot) return;
+        const restore = ITEMS[slot.item.id].staminaRestore;
+        if (!restore) return;
+        this.runtime.inventory.remove(slotIndex, 1);
+        this.runtime.stats.addStamina(restore);
+        this.ui.notify(`${slot.item.emoji} Dùng ${slot.item.name} → +${restore} thể lực!`, '#80ff80');
+        this.ui.refreshInventoryPanel(this.runtime.inventory);
       };
 
       // Shop sell callback

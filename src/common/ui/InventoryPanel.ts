@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import type { InventorySystem } from '../systems/InventorySystem';
+import { ITEMS } from '../data/items';
 
 const SLOT_SIZE = 44;
 const SLOT_GAP  = 6;
@@ -15,9 +16,13 @@ export class InventoryPanel {
   private invSlotNames:    Phaser.GameObjects.Text[]      = [];
   private invGoldText!:    Phaser.GameObjects.Text;
   private invInfoText!:    Phaser.GameObjects.Text;
+  private useBtn!:         Phaser.GameObjects.Text;
   private _isOpen          = false;
   private _inventoryRef:   InventorySystem | null = null;
   private invSelectedSlot: number | null = null;
+
+  /** Fired when the player clicks "Dùng" on a food item. */
+  onUse?: (slotIndex: number) => void;
 
   constructor(scene: Phaser.Scene, W: number, H: number) {
     this.scene = scene;
@@ -47,6 +52,7 @@ export class InventoryPanel {
     if (!this._isOpen) return;
     this._isOpen = false;
     this.invSelectedSlot = null;
+    this.useBtn?.setVisible(false);
     this.scene.tweens.add({
       targets: this.invContainer,
       alpha: 0,
@@ -86,14 +92,35 @@ export class InventoryPanel {
       if (inv.getSlot(i)) {
         this.invSelectedSlot = i;
         this.refresh(inv);
+        this.updateUseBtn(i, inv);
       }
     } else if (this.invSelectedSlot === i) {
       this.invSelectedSlot = null;
+      this.useBtn?.setVisible(false);
       this.refresh(inv);
     } else {
       inv.swapSlots(this.invSelectedSlot, i);
       this.invSelectedSlot = null;
+      this.useBtn?.setVisible(false);
       this.refresh(inv);
+    }
+  }
+
+  private updateUseBtn(slotIndex: number, inv: InventorySystem): void {
+    const slot = inv.getSlot(slotIndex);
+    if (slot && ITEMS[slot.item.id]?.staminaRestore) {
+      this.useBtn.setText(`🍽 Dùng  ${slot.item.emoji}  ${slot.item.name}`);
+      this.useBtn.setVisible(true);
+      // Re-bind click so we always capture the latest slotIndex
+      this.useBtn.off('pointerdown');
+      this.useBtn.on('pointerdown', () => {
+        this.onUse?.(slotIndex);
+        this.invSelectedSlot = null;
+        this.useBtn.setVisible(false);
+        if (this._inventoryRef) this.refresh(this._inventoryRef);
+      });
+    } else {
+      this.useBtn.setVisible(false);
     }
   }
 
@@ -146,6 +173,14 @@ export class InventoryPanel {
       fontSize: '12px', color: '#ffe066',
       stroke: '#000000', strokeThickness: 2,
     }).setOrigin(0.5);
+    this.useBtn = this.scene.add.text(CX, y_info + 18, '', {
+      fontSize: '12px', color: '#80ff80',
+      backgroundColor: '#0a3a1a',
+      padding: { x: 10, y: 5 },
+    }).setOrigin(0.5).setVisible(false)
+      .setInteractive({ useHandCursor: true })
+      .on('pointerover', () => this.useBtn.setBackgroundColor('#1a6a2a').setColor('#ffffff'))
+      .on('pointerout',  () => this.useBtn.setBackgroundColor('#0a3a1a').setColor('#80ff80'));
     this.invGoldText = this.scene.add.text(CX, y_gold, '💰 0 G', {
       fontSize: '12px', color: '#ffe066',
       stroke: '#000000', strokeThickness: 2,
@@ -209,7 +244,7 @@ export class InventoryPanel {
       overlay, box, title,
       hbLabel, hbSep, hbBg,
       midSep, bpLabel,
-      this.invInfoText, this.invGoldText, hint,
+      this.invInfoText, this.useBtn, this.invGoldText, hint,
       ...gridObjs,
     ]);
     this.invContainer.setVisible(false);
